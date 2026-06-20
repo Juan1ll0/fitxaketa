@@ -11,12 +11,12 @@ Definir la estructura de navegacion de la app mediante un bottom nav con 3 tabs 
 
 ## Sub-specs
 
-| Sub-spec | Descripcion | Estado | Dependencias |
-|----------|-------------|--------|--------------|
-| [003.1](./003.1-navegacion.md) | Bottom Nav + layout compartido | draft | - |
-| [003.2](./003.2-tab-fichar.md) | Tab Fichar (cronometro + resumen) | draft | 003.1 |
-| [003.3](./003.3-tab-historial.md) | Tab Historial (lista agrupada) | draft | 003.1 |
-| [003.4](./003.4-tab-estadisticas.md) | Tab Estadisticas (graficas) | draft | 003.1 |
+| Sub-spec                             | Descripcion                       | Estado | Dependencias |
+| ------------------------------------ | --------------------------------- | ------ | ------------ |
+| [003.1](./003.1-navegacion.md)       | Bottom Nav + layout compartido    | draft  | -            |
+| [003.2](./003.2-tab-fichar.md)       | Tab Fichar (cronometro + resumen) | draft  | 003.1        |
+| [003.3](./003.3-tab-historial.md)    | Tab Historial (lista agrupada)    | draft  | 003.1        |
+| [003.4](./003.4-tab-estadisticas.md) | Tab Estadisticas (graficas)       | draft  | 003.1        |
 
 ## Contexto
 
@@ -65,6 +65,7 @@ src/routes/
 ### Utilidades puras
 
 Crear `src/lib/utils/dashboard.ts` con:
+
 - `formatearFecha(date: Date): string` — formato "Lunes, 21 de junio de 2026"
 - `formatearHora(date: Date): string` — formato "HH:MM"
 - `agruparPorDia(jornadas: Jornada[]): Map<string, Jornada[]>` — agrupa por fecha
@@ -88,9 +89,9 @@ Crear `src/lib/utils/dashboard.ts` con:
 
 ## Verificacion
 
-| Criterio | Metodo | Evidencia |
-|----------|--------|-----------|
-| Bottom nav | Navegar entre tabs | Tabs se resaltan, contenido cambia |
-| Build | `npm run build` | Sin errores |
-| Type check | `npm run check` | Sin errores |
-| Quality gate | `npm run quality` | Todos los checks pasan |
+| Criterio     | Metodo             | Evidencia                          |
+| ------------ | ------------------ | ---------------------------------- |
+| Bottom nav   | Navegar entre tabs | Tabs se resaltan, contenido cambia |
+| Build        | `npm run build`    | Sin errores                        |
+| Type check   | `npm run check`    | Sin errores                        |
+| Quality gate | `npm run quality`  | Todos los checks pasan             |
