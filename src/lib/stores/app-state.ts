@@ -1,25 +1,15 @@
-import { createJornada, closeJornada, getOpenJornada, type Jornada } from '$lib/db';
+import { createJornada, closeJornada, getOpenJornada, getAllJornadas, type Jornada } from '$lib/db';
+import { appState, notify, type Periodo, type ResumenDia } from './app-state.svelte';
 
-type Listener = () => void;
-
-let clockedIn = false;
-let openJornadaId: number | null = null;
-let startTime: Date | null = null;
-let elapsed = '00:00:00';
 let intervalId: ReturnType<typeof setInterval> | null = null;
-const listeners = new Set<Listener>();
-
-function notify() {
-	listeners.forEach((fn) => fn());
-}
 
 function tick() {
-	if (!startTime) return;
-	const diff = Date.now() - startTime.getTime();
+	if (!appState.startTime) return;
+	const diff = Date.now() - appState.startTime.getTime();
 	const h = String(Math.floor(diff / 3600000)).padStart(2, '0');
 	const m = String(Math.floor((diff % 3600000) / 60000)).padStart(2, '0');
 	const s = String(Math.floor((diff % 60000) / 1000)).padStart(2, '0');
-	elapsed = `${h}:${m}:${s}`;
+	appState.elapsed = `${h}:${m}:${s}`;
 	notify();
 }
 
@@ -33,22 +23,53 @@ function stopTimer() {
 	intervalId = null;
 }
 
+function calcularHoy(jornadas: Jornada[]): { hoy: Jornada[]; resumen: ResumenDia } {
+	const hoy = new Date().toDateString();
+	const filtradas = jornadas.filter((j) => new Date(j.start_time).toDateString() === hoy);
+	const totalMinutos = filtradas.reduce(
+		(acc, j) => acc + (j.duration ?? Math.floor((Date.now() - j.start_time.getTime()) / 60000)),
+		0
+	);
+	return {
+		hoy: filtradas,
+		resumen: {
+			totalHoras: Math.round((totalMinutos / 60) * 100) / 100,
+			numeroJornadas: filtradas.length
+		}
+	};
+}
+
+export async function cargarJornadas(): Promise<void> {
+	appState.cargando = true;
+	appState.jornadas = await getAllJornadas();
+	const { hoy, resumen } = calcularHoy(appState.jornadas);
+	appState.jornadasHoy = hoy;
+	appState.resumenHoy = resumen;
+	appState.cargando = false;
+	notify();
+}
+
+export function setPeriodo(periodo: Periodo): void {
+	appState.periodoSeleccionado = periodo;
+	notify();
+}
+
 export async function initAppState(): Promise<void> {
 	const open: Jornada | undefined = await getOpenJornada();
 	if (open && open.id != null) {
-		clockedIn = true;
-		openJornadaId = open.id;
-		startTime = open.start_time;
+		appState.clockedIn = true;
+		appState.openJornadaId = open.id;
+		appState.startTime = open.start_time;
 		startTimer();
 		tick();
 	} else {
-		clockedIn = false;
-		openJornadaId = null;
-		startTime = null;
-		elapsed = '00:00:00';
+		appState.clockedIn = false;
+		appState.openJornadaId = null;
+		appState.startTime = null;
+		appState.elapsed = '00:00:00';
 		stopTimer();
 	}
-	notify();
+	await cargarJornadas();
 }
 
 export async function startJornada(coords?: {
@@ -59,38 +80,41 @@ export async function startJornada(coords?: {
 		lat_start: coords?.lat,
 		lng_start: coords?.lng
 	});
-	clockedIn = true;
-	openJornadaId = id;
-	startTime = new Date();
+	appState.clockedIn = true;
+	appState.openJornadaId = id;
+	appState.startTime = new Date();
 	startTimer();
 	tick();
-	notify();
+	await cargarJornadas();
 }
 
 export async function stopJornada(coords?: {
 	lat: number | null;
 	lng: number | null;
 }): Promise<void> {
-	if (openJornadaId == null) return;
+	if (appState.openJornadaId == null) return;
 	stopTimer();
-	await closeJornada(openJornadaId, { lat: coords?.lat ?? null, lng: coords?.lng ?? null });
-	clockedIn = false;
-	openJornadaId = null;
-	startTime = null;
-	elapsed = '00:00:00';
-	notify();
+	await closeJornada(appState.openJornadaId, {
+		lat: coords?.lat ?? null,
+		lng: coords?.lng ?? null
+	});
+	appState.clockedIn = false;
+	appState.openJornadaId = null;
+	appState.startTime = null;
+	appState.elapsed = '00:00:00';
+	await cargarJornadas();
 }
 
-export function subscribe(fn: Listener): () => void {
-	listeners.add(fn);
-	fn();
-	return () => listeners.delete(fn);
-}
-
-export function getClockedIn(): boolean {
-	return clockedIn;
-}
-
-export function getElapsed(): string {
-	return elapsed;
-}
+export {
+	appState,
+	notificarCambio,
+	subscribe,
+	getClockedIn,
+	getElapsed,
+	getJornadas,
+	getJornadasHoy,
+	getResumenHoy,
+	getPeriodoSeleccionado,
+	type Periodo,
+	type ResumenDia
+} from './app-state.svelte';
