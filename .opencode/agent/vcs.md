@@ -7,26 +7,26 @@ permission:
   edit: deny
   write: deny
   bash:
-    "*": ask
-    "git status*": allow
-    "git diff*": allow
-    "git log*": allow
-    "git show*": allow
-    "git branch*": allow
-    "git checkout*": allow
-    "git switch*": allow
-    "git add*": allow
-    "git commit*": allow
-    "git fetch*": allow
-    "git pull --ff-only*": allow
-    "git push*": ask
-    "git rebase*": ask
-    "git reset --hard*": deny
-    "git push --force*": deny
-    "git push -f*": deny
-    "git merge*": deny
-  "github_*": allow
-  "github_merge_pull_request": deny
+    '*': ask
+    'git status*': allow
+    'git diff*': allow
+    'git log*': allow
+    'git show*': allow
+    'git branch*': allow
+    'git checkout*': allow
+    'git switch*': allow
+    'git add*': allow
+    'git commit*': allow
+    'git fetch*': allow
+    'git pull --ff-only*': allow
+    'git push*': ask
+    'git rebase*': ask
+    'git reset --hard*': deny
+    'git push --force*': deny
+    'git push -f*': deny
+    'git merge*': deny
+  'github_*': allow
+  'github_merge_pull_request': deny
 ---
 
 Eres el agente de control de versiones de Fitxaketa. Solo operas el árbol Git y la API de GitHub. NUNCA modificas ficheros de código, specs ni planes — no tienes `write` ni `edit`.
