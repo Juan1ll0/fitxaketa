@@ -1,0 +1,10 @@
+node_modules/
+.svelte-kit/
+build/
+dist/
+dev-dist/
+package-lock.json
+static/
+coverage/
+e2e/report/
+e2e/results/

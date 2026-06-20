@@ -1,0 +1,6 @@
+{
+	"$schema": "https://unpkg.com/knip@latest/schema.json",
+	"entry": ["src/service-worker.ts", "src/routes/**/+*.{ts,svelte}", "src/app.html"],
+	"project": ["src/**/*.{ts,svelte}"],
+	"ignoreDependencies": ["tailwindcss", "@secretlint/secretlint-rule-preset-recommend"]
+}

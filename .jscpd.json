@@ -1,0 +1,12 @@
+{
+	"threshold": 2,
+	"minLines": 10,
+	"minTokens": 70,
+	"format": ["typescript", "javascript", "markup"],
+	"formatsExts": {
+		"markup": ["svelte", "html"]
+	},
+	"ignore": ["**/node_modules/**", "**/.svelte-kit/**", "**/build/**", "**/dist/**"],
+	"absolute": true,
+	"gitignore": true
+}
