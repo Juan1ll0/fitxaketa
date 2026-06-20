@@ -74,6 +74,7 @@ G11 Lighthouse: ✓ / PENDIENTE_MANUAL
 
 ## Prohibido
 
+- **Referencias a IA en los mensajes:** sin trailers `Co-Authored-By` de asistentes, sin menciones a Claude/Anthropic/agentes ni "Generated with…". Los commits van a nombre del autor humano del proyecto y nada más.
 - `git push --force` / `--force-with-lease` sobre ramas compartidas.
 - `git reset --hard` que descarte trabajo no respaldado.
 - Reescribir historial ya publicado (rebase de commits pusheados).
