@@ -9,6 +9,7 @@
 	--color-success-dark: #16a34a;
 	--color-surface: #0f172a;
 	--color-surface-light: #1e293b;
+	--color-border: #334155;
 	--color-text: #f8fafc;
 	--color-text-muted: #94a3b8;
 }
@@ -22,6 +23,7 @@
 	--color-success-dark: var(--color-success-dark);
 	--color-surface: var(--color-surface);
 	--color-surface-light: var(--color-surface-light);
+	--color-border: var(--color-border);
 	--color-text: var(--color-text);
 	--color-text-muted: var(--color-text-muted);
 
