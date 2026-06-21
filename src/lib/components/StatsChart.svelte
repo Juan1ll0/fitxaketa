@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
-	import type { Chart, Plugin, TooltipItem } from 'chart.js';
+	import type { Chart, TooltipItem } from 'chart.js';
 	import type { Periodo } from '$lib/stores/app-state';
 	import type { DatosGrafica } from '$lib/utils/dashboard';
 	import { formatearHora, etiquetaEjeX } from '$lib/utils/dashboard';
@@ -13,42 +13,6 @@
 	let isDestroyed = false;
 
 	let etiquetaX = $derived(etiquetaEjeX(periodo));
-
-	function calcularTotalApilado(datasets: Chart['data']['datasets'], index: number) {
-		let total = 0;
-		for (const ds of datasets) {
-			const val = ds.data[index];
-			if (typeof val === 'number' && val > 0) total += val;
-		}
-		return total;
-	}
-
-	const dataLabelsPlugin: Plugin<'bar'> = {
-		id: 'fitxaketaDataLabels',
-		afterDatasetsDraw(chartInstance) {
-			const { ctx } = chartInstance;
-			const numLabels = chartInstance.data.labels?.length ?? 0;
-			const meta = chartInstance.getDatasetMeta(chartInstance.data.datasets.length - 1);
-			for (let i = 0; i < numLabels; i++) {
-				const total = calcularTotalApilado(chartInstance.data.datasets, i);
-				if (total <= 0) continue;
-				const bar = meta.data[i] as unknown as { x: number; y: number; height: number };
-				if (!bar) continue;
-				const valor = Math.round(total * 10) / 10;
-				const texto = `${valor}h`;
-				const centerY = bar.y + bar.height / 2;
-				ctx.save();
-				ctx.fillStyle = '#f8fafc';
-				ctx.font = '11px system-ui, sans-serif';
-				ctx.textAlign = 'center';
-				ctx.textBaseline = 'middle';
-				ctx.translate(bar.x, centerY);
-				ctx.rotate(-Math.PI / 2);
-				ctx.fillText(texto, 0, 0);
-				ctx.restore();
-			}
-		}
-	};
 
 	function tooltipCallbacks() {
 		return {
@@ -99,7 +63,6 @@
 			options: {
 				responsive: true,
 				maintainAspectRatio: false,
-				layout: { padding: { top: 20 } },
 				plugins: {
 					legend: { display: false },
 					tooltip: { callbacks: tooltipCallbacks() }
@@ -116,8 +79,7 @@
 						grid: { color: 'rgba(148, 163, 184, 0.1)' }
 					}
 				}
-			},
-			plugins: [dataLabelsPlugin]
+			}
 		});
 	}
 
