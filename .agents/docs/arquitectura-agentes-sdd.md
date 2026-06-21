@@ -294,16 +294,16 @@ los principales runtimes de agentes.
 
 ### 4.1 Matriz de responsabilidades (RACI adaptado)
 
-| Artefacto                       | Orchestrator | Planner      | Architect        | PM                    | Doc-Writer    | Implementers       | VCS          | Humano                  |
-| ------------------------------- | ------------ | ------------ | ---------------- | --------------------- | ------------- | ------------------ | ------------ | ----------------------- |
-| `specs/*.md`                    | lee          | lee          | lee              | lee                   | lee           | lee                | —            | **escribe / `→done`**   |
-| `*.plan.md` (contenido)         | lee          | **escribe**  | revisa           | actualiza checkboxes  | lee           | lee                | —            | aprueba                 |
-| `*.plan.md` (status)            | lee          | crea `draft` | —                | `in-progress→blocked` | —             | —                  | —            | **`→approved`**         |
-| Código fuente                   | —            | —            | revisa           | lee                   | lee           | **escribe**        | —            | revisa                  |
-| Tests                           | —            | —            | —                | verifica              | —             | **tester escribe** | —            | —                       |
-| Ramas/commits/PR (Git)          | —            | —            | —                | —                     | —             | —                  | **escribe**  | **mergea = cierre**     |
-| `04-api.md`, `03-data-model.md` | —            | —            | revisa           | detecta drift         | **actualiza** | —                  | —            | aprueba                 |
-| `MEMORY.md`                     | lee          | lee          | añade decisiones | añade cierres         | —             | —                  | —            | edita libre             |
+| Artefacto                       | Orchestrator | Planner      | Architect        | PM                    | Doc-Writer    | Implementers       | VCS         | Humano                |
+| ------------------------------- | ------------ | ------------ | ---------------- | --------------------- | ------------- | ------------------ | ----------- | --------------------- |
+| `specs/*.md`                    | lee          | lee          | lee              | lee                   | lee           | lee                | —           | **escribe / `→done`** |
+| `*.plan.md` (contenido)         | lee          | **escribe**  | revisa           | actualiza checkboxes  | lee           | lee                | —           | aprueba               |
+| `*.plan.md` (status)            | lee          | crea `draft` | —                | `in-progress→blocked` | —             | —                  | —           | **`→approved`**       |
+| Código fuente                   | —            | —            | revisa           | lee                   | lee           | **escribe**        | —           | revisa                |
+| Tests                           | —            | —            | —                | verifica              | —             | **tester escribe** | —           | —                     |
+| Ramas/commits/PR (Git)          | —            | —            | —                | —                     | —             | —                  | **escribe** | **mergea = cierre**   |
+| `04-api.md`, `03-data-model.md` | —            | —            | revisa           | detecta drift         | **actualiza** | —                  | —           | aprueba               |
+| `MEMORY.md`                     | lee          | lee          | añade decisiones | añade cierres         | —             | —                  | —           | edita libre           |
 
 ### 4.2 Definición de cada rol
 
