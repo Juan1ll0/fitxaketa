@@ -22,7 +22,11 @@
 				if (periodo === 'año') return chartDatos.labels[idx] ?? '';
 				const jornada = chartDatos.datasets[0]?.jornadasPorLabel[idx];
 				if (!jornada || Array.isArray(jornada)) return chartDatos.labels[idx] ?? '';
-				return new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: '2-digit', month: 'long' }).format(new Date(jornada.start_time));
+				return new Intl.DateTimeFormat('es-ES', {
+					weekday: 'long',
+					day: '2-digit',
+					month: 'long'
+				}).format(new Date(jornada.start_time));
 			},
 			afterTitle: (items: TooltipItem<'bar'>[]) => {
 				if (!items.length) return '';
@@ -86,7 +90,14 @@
 	onMount(async () => {
 		const mod = await import('chart.js');
 		if (isDestroyed) return;
-		mod.Chart.register(mod.BarController, mod.BarElement, mod.CategoryScale, mod.LinearScale, mod.Tooltip, mod.Legend);
+		mod.Chart.register(
+			mod.BarController,
+			mod.BarElement,
+			mod.CategoryScale,
+			mod.LinearScale,
+			mod.Tooltip,
+			mod.Legend
+		);
 		crearChart(mod.Chart);
 	});
 

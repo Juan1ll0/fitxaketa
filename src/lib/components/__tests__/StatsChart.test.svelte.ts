@@ -22,8 +22,6 @@ const mockChartInstance = {
 	data: { labels: [], datasets: [{ data: [] }] }
 };
 
-// Mock constructor con método estático register
-// Usamos una función normal para que pueda ser instanciada con "new"
 function MockChartClass(this: typeof mockChartInstance) {
 	return mockChartInstance;
 }
@@ -35,7 +33,6 @@ MockChartClass.LinearScale = vi.fn();
 MockChartClass.Tooltip = vi.fn();
 MockChartClass.Legend = vi.fn();
 
-// El modulo exporta: Chart (constructor con register estático), BarController, etc.
 vi.mock('chart.js', () => ({
 	Chart: MockChartClass,
 	BarController: vi.fn(),

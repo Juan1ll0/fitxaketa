@@ -1,4 +1,4 @@
-export type { ResumenDia, DatosGrafica, DatasetGrafica } from '$lib/utils/dashboard-types';
+export type { ResumenDia, DatosGrafica } from '$lib/utils/dashboard-types';
 export {
 	formatearFecha,
 	formatearFechaLarga,

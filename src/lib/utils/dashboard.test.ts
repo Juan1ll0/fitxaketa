@@ -686,9 +686,42 @@ describe('dashboard utils', () => {
 		it('calcula correctamente con múltiples jornadas en el mismo día', () => {
 			const mismaFecha = new Date(2026, 5, 15, 8, 0);
 			const jornadas: Jornada[] = [
-				{ id: 1, start_time: mismaFecha, end_time: new Date(2026, 5, 15, 12, 0), lat_start: null, lng_start: null, lat_end: null, lng_end: null, duration: 240, status: 'closed', synced: 1 },
-				{ id: 2, start_time: new Date(2026, 5, 15, 13, 0), end_time: new Date(2026, 5, 15, 17, 0), lat_start: null, lng_start: null, lat_end: null, lng_end: null, duration: 240, status: 'closed', synced: 1 },
-				{ id: 3, start_time: new Date(2026, 5, 15, 18, 0), end_time: new Date(2026, 5, 15, 20, 0), lat_start: null, lng_start: null, lat_end: null, lng_end: null, duration: 120, status: 'closed', synced: 1 }
+				{
+					id: 1,
+					start_time: mismaFecha,
+					end_time: new Date(2026, 5, 15, 12, 0),
+					lat_start: null,
+					lng_start: null,
+					lat_end: null,
+					lng_end: null,
+					duration: 240,
+					status: 'closed',
+					synced: 1
+				},
+				{
+					id: 2,
+					start_time: new Date(2026, 5, 15, 13, 0),
+					end_time: new Date(2026, 5, 15, 17, 0),
+					lat_start: null,
+					lng_start: null,
+					lat_end: null,
+					lng_end: null,
+					duration: 240,
+					status: 'closed',
+					synced: 1
+				},
+				{
+					id: 3,
+					start_time: new Date(2026, 5, 15, 18, 0),
+					end_time: new Date(2026, 5, 15, 20, 0),
+					lat_start: null,
+					lng_start: null,
+					lat_end: null,
+					lng_end: null,
+					duration: 120,
+					status: 'closed',
+					synced: 1
+				}
 			];
 
 			const resumen = calcularResumenPeriodo(jornadas);

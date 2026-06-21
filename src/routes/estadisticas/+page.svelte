@@ -1,11 +1,6 @@
 <script lang="ts">
 	import { afterNavigate } from '$app/navigation';
-	import {
-		subscribe,
-		getJornadas,
-		cargarJornadas,
-		type Periodo
-	} from '$lib/stores/app-state';
+	import { subscribe, getJornadas, cargarJornadas, type Periodo } from '$lib/stores/app-state';
 	import {
 		filtrarPorPeriodo,
 		calcularResumenPeriodo,
