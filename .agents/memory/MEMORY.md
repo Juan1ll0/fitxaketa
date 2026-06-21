@@ -64,12 +64,14 @@ Esto permite que los tests importen desde `$lib/stores/app-state` (`.ts`) sin er
 SvelteKit 2 requiere `throw redirect(status, location)` — no basta con llamar a `redirect()`.
 
 Implementado en `src/routes/registros/+page.ts`:
+
 ```ts
 import { redirect } from '@sveltejs/kit';
 export const load: PageLoad = () => {
 	throw redirect(301, '/historial');
 };
 ```
+
 Además se añadió `export const ssr = false;` para evitar problemas con módulos client-side en esta ruta.
 
 ### Token `--color-border` añadido al theme
@@ -91,6 +93,7 @@ Usado por BottomNav para el borde superior: `border-t border-border`.
 ### Store extendido con infraestructura para sub-specs futuras
 
 Nuevos campos en `appState` (objeto reactivo con `$state`):
+
 - `jornadas: Jornada[]` — todas las jornadas desde Dexie
 - `jornadasHoy: Jornada[]` — filtradas por fecha actual
 - `resumenHoy: ResumenDia` — `{ totalHoras: number, numeroJornadas: number }`
@@ -98,12 +101,14 @@ Nuevos campos en `appState` (objeto reactivo con `$state`):
 - `cargando: boolean` — estado de carga inicial
 
 Nuevas acciones en `app-state.ts`:
+
 - `cargarJornadas()` — recarga desde Dexie y recalcula `jornadas`, `jornadasHoy`, `resumenHoy`
 - `setPeriodo(periodo)` — cambia periodo seleccionado
 - `initAppState()` — recupera jornada abierta desde Dexie y arranca el cronómetro si procede
 - `startJornada()` y `stopJornada()` ahora llaman a `cargarJornadas()` automáticamente tras fichar
 
 Getters públicos (desde `.svelte.ts`):
+
 - `getJornadas()`, `getJornadasHoy()`, `getResumenHoy()`, `getPeriodoSeleccionado()`
 - `getClockedIn()`, `getElapsed()` (ya existentes)
 
