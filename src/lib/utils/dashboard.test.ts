@@ -1,15 +1,16 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
 	formatearFecha,
+	formatearFechaLarga,
 	calcularResumenDia,
 	agruparPorDia,
 	formatearHora,
 	formatearDuracion,
 	filtrarPorPeriodo,
 	calcularResumenPeriodo,
-	formatearHorasDecimal
+	formatearHorasDecimal,
+	prepararDatosGrafica
 } from '$lib/utils/dashboard';
-import type { Periodo } from '$lib/stores/app-state';
 import type { Jornada } from '$lib/db';
 
 /** Factory de jornada cerrada con coords null. duration en minutos, startHour en hora del día. */
@@ -304,19 +305,28 @@ describe('dashboard utils', () => {
 	// filtrarPorPeriodo()
 	// ─────────────────────────────────────────────────────────────
 	describe('filtrarPorPeriodo()', () => {
+		interface OpcionesJornadaEnFecha {
+			id: number;
+			year: number;
+			month: number;
+			day: number;
+			hour: number;
+			durationMinutes: number;
+		}
+
 		/** Factory de jornada cerrada en una fecha específica (mes 5 = junio). */
-		function jornadaEnFecha(
-			id: number,
-			year: number,
-			month: number,
-			day: number,
-			hour: number,
-			durationMinutes: number
-		): Jornada {
+		function jornadaEnFecha(opciones: OpcionesJornadaEnFecha): Jornada {
+			const { id, year, month, day, hour, durationMinutes } = opciones;
 			return {
 				id,
 				start_time: new Date(year, month - 1, day, hour, 0),
-				end_time: new Date(year, month - 1, day, hour + Math.floor(durationMinutes / 60), durationMinutes % 60),
+				end_time: new Date(
+					year,
+					month - 1,
+					day,
+					hour + Math.floor(durationMinutes / 60),
+					durationMinutes % 60
+				),
 				lat_start: null,
 				lng_start: null,
 				lat_end: null,
@@ -327,13 +337,16 @@ describe('dashboard utils', () => {
 			};
 		}
 
-		function jornadaAbiertaEnFecha(
-			id: number,
-			year: number,
-			month: number,
-			day: number,
-			hour: number
-		): Jornada {
+		interface OpcionesJornadaAbiertaEnFecha {
+			id: number;
+			year: number;
+			month: number;
+			day: number;
+			hour: number;
+		}
+
+		function jornadaAbiertaEnFecha(opciones: OpcionesJornadaAbiertaEnFecha): Jornada {
+			const { id, year, month, day, hour } = opciones;
 			return {
 				id,
 				start_time: new Date(year, month - 1, day, hour, 0),
@@ -351,12 +364,10 @@ describe('dashboard utils', () => {
 		describe('filtra correctamente por periodo', () => {
 			it('devuelve solo jornadas dentro del rango de semana', () => {
 				const hoy = new Date(2026, 5, 21); // 21 junio 2026
-				const hace6dias = new Date(2026, 5, 15);
-				const hace8dias = new Date(2026, 5, 13);
 
 				const jornadas: Jornada[] = [
-					jornadaEnFecha(1, 2026, 6, 15, 9, 480), // hace 6 días → dentro de semana
-					jornadaEnFecha(2, 2026, 6, 13, 9, 480)  // hace 8 días → fuera de semana
+					jornadaEnFecha({ id: 1, year: 2026, month: 6, day: 15, hour: 9, durationMinutes: 480 }), // hace 6 días → dentro de semana
+					jornadaEnFecha({ id: 2, year: 2026, month: 6, day: 13, hour: 9, durationMinutes: 480 }) // hace 8 días → fuera de semana
 				];
 
 				// Mock de Date para que filtrarPorPeriodo use una fecha fija
@@ -372,12 +383,10 @@ describe('dashboard utils', () => {
 
 			it('devuelve solo jornadas dentro del rango de mes', () => {
 				const hoy = new Date(2026, 5, 21);
-				const hace20dias = new Date(2026, 5, 1);
-				const hace35dias = new Date(2026, 4, 17);
 
 				const jornadas: Jornada[] = [
-					jornadaEnFecha(1, 2026, 6, 1, 9, 480),  // hace 20 días → dentro de mes
-					jornadaEnFecha(2, 2026, 4, 17, 9, 480)  // hace 35 días → fuera de mes
+					jornadaEnFecha({ id: 1, year: 2026, month: 6, day: 1, hour: 9, durationMinutes: 480 }), // hace 20 días → dentro de mes
+					jornadaEnFecha({ id: 2, year: 2026, month: 4, day: 17, hour: 9, durationMinutes: 480 }) // hace 35 días → fuera de mes
 				];
 
 				const nowMock = vi.spyOn(Date, 'now').mockReturnValue(hoy.getTime());
@@ -390,14 +399,12 @@ describe('dashboard utils', () => {
 				}
 			});
 
-			it('devuelve solo jornadas dentro del rango de año', () => {
+			it('devuelve solo jornadas dentro del año natural en curso', () => {
 				const hoy = new Date(2026, 5, 21);
-				const hace300dias = new Date(2025, 8, 1);
-				const hace400dias = new Date(2025, 4, 1);
 
 				const jornadas: Jornada[] = [
-					jornadaEnFecha(1, 2025, 8, 1, 9, 480),   // hace 300 días → dentro de año
-					jornadaEnFecha(2, 2025, 4, 1, 9, 480)   // hace 400 días → fuera de año
+					jornadaEnFecha({ id: 1, year: 2026, month: 3, day: 15, hour: 9, durationMinutes: 480 }), // mismo año → incluida
+					jornadaEnFecha({ id: 2, year: 2025, month: 8, day: 1, hour: 9, durationMinutes: 480 }) // año anterior → excluida
 				];
 
 				const nowMock = vi.spyOn(Date, 'now').mockReturnValue(hoy.getTime());
@@ -415,8 +422,8 @@ describe('dashboard utils', () => {
 			it('excluye jornadas abiertas del resultado', () => {
 				const hoy = new Date(2026, 5, 21);
 				const jornadas: Jornada[] = [
-					jornadaEnFecha(1, 2026, 6, 20, 9, 480),     // cerrada → incluida
-					jornadaAbiertaEnFecha(2, 2026, 6, 21, 14)   // abierta → excluida
+					jornadaEnFecha({ id: 1, year: 2026, month: 6, day: 20, hour: 9, durationMinutes: 480 }), // cerrada → incluida
+					jornadaAbiertaEnFecha({ id: 2, year: 2026, month: 6, day: 21, hour: 14 }) // abierta → excluida
 				];
 
 				const nowMock = vi.spyOn(Date, 'now').mockReturnValue(hoy.getTime());
@@ -433,7 +440,7 @@ describe('dashboard utils', () => {
 		it('retorna array vacío si no hay jornadas en el periodo', () => {
 			const hoy = new Date(2026, 5, 21);
 			const jornadas: Jornada[] = [
-				jornadaEnFecha(1, 2025, 1, 1, 9, 480) // hace más de un año
+				jornadaEnFecha({ id: 1, year: 2025, month: 1, day: 1, hour: 9, durationMinutes: 480 }) // hace más de un año
 			];
 
 			const nowMock = vi.spyOn(Date, 'now').mockReturnValue(hoy.getTime());
@@ -504,9 +511,9 @@ describe('dashboard utils', () => {
 
 			const resumen = calcularResumenPeriodo(jornadas);
 
-			expect(resumen.totalHoras).toBe(20);           // 8 + 8 + 4 = 20 h
-			expect(resumen.diasTrabajados).toBe(3);        // 3 días únicos
-			expect(resumen.totalJornadas).toBe(3);         // 3 jornadas
+			expect(resumen.totalHoras).toBe(20); // 8 + 8 + 4 = 20 h
+			expect(resumen.diasTrabajados).toBe(3); // 3 días únicos
+			expect(resumen.totalJornadas).toBe(3); // 3 jornadas
 			expect(resumen.mediaDiaria).toBeCloseTo(20 / 3); // ~6.67 h/día
 		});
 
@@ -562,10 +569,10 @@ describe('dashboard utils', () => {
 
 			const resumen = calcularResumenPeriodo(jornadas);
 
-			expect(resumen.totalHoras).toBe(15);       // 3 + 4 + 8 = 15 h
-			expect(resumen.diasTrabajados).toBe(2);     // Solo 2 días únicos (15 y 16)
-			expect(resumen.totalJornadas).toBe(3);      // 3 jornadas
-			expect(resumen.mediaDiaria).toBe(7.5);      // 15 / 2 = 7.5 h/día
+			expect(resumen.totalHoras).toBe(15); // 3 + 4 + 8 = 15 h
+			expect(resumen.diasTrabajados).toBe(2); // Solo 2 días únicos (15 y 16)
+			expect(resumen.totalJornadas).toBe(3); // 3 jornadas
+			expect(resumen.mediaDiaria).toBe(7.5); // 15 / 2 = 7.5 h/día
 		});
 	});
 
@@ -595,6 +602,128 @@ describe('dashboard utils', () => {
 
 		it('maneja valores grandes: 100.5 → "100h 30m"', () => {
 			expect(formatearHorasDecimal(100.5)).toBe('100h 30m');
+		});
+	});
+
+	// ─────────────────────────────────────────────────────────────
+	// formatearFechaLarga()
+	// ─────────────────────────────────────────────────────────────
+	describe('formatearFechaLarga()', () => {
+		it('formatea con el mes capitalizado', () => {
+			const fecha = new Date(2026, 5, 23);
+			expect(formatearFechaLarga(fecha)).toBe('23 de Junio de 2026');
+		});
+	});
+
+	// ─────────────────────────────────────────────────────────────
+	// prepararDatosGrafica()
+	// ─────────────────────────────────────────────────────────────
+	describe('prepararDatosGrafica()', () => {
+		function jornadaEnFechaCompleta(opciones: {
+			id: number;
+			year: number;
+			month: number;
+			day: number;
+			hour: number;
+			durationMinutes: number;
+		}): Jornada {
+			const { id, year, month, day, hour, durationMinutes } = opciones;
+			return {
+				id,
+				start_time: new Date(year, month - 1, day, hour, 0),
+				end_time: new Date(
+					year,
+					month - 1,
+					day,
+					hour + Math.floor(durationMinutes / 60),
+					durationMinutes % 60
+				),
+				lat_start: null,
+				lng_start: null,
+				lat_end: null,
+				lng_end: null,
+				duration: durationMinutes,
+				status: 'closed',
+				synced: 1
+			};
+		}
+
+		it('genera una barra por jornada y alterna colores por día', () => {
+			const jornadas: Jornada[] = [
+				jornadaEnFechaCompleta({
+					id: 1,
+					year: 2026,
+					month: 6,
+					day: 23,
+					hour: 9,
+					durationMinutes: 240
+				}), // primer jornada del día → azul
+				jornadaEnFechaCompleta({
+					id: 2,
+					year: 2026,
+					month: 6,
+					day: 23,
+					hour: 14,
+					durationMinutes: 120
+				}), // segunda del día → verde
+				jornadaEnFechaCompleta({
+					id: 3,
+					year: 2026,
+					month: 6,
+					day: 24,
+					hour: 9,
+					durationMinutes: 480
+				}) // nuevo día → azul
+			];
+
+			const barras = prepararDatosGrafica(jornadas, 'semana');
+
+			expect(barras).toHaveLength(3);
+			expect(barras[0].label).toBe('23/06');
+			expect(barras[0].valor).toBe(4);
+			expect(barras[0].color).toBe('#3b82f6');
+			expect(barras[1].color).toBe('#22c55e');
+			expect(barras[2].label).toBe('24/06');
+			expect(barras[2].color).toBe('#3b82f6');
+		});
+
+		it('agrupa jornadas por mes para el periodo anual', () => {
+			const jornadas: Jornada[] = [
+				jornadaEnFechaCompleta({
+					id: 1,
+					year: 2026,
+					month: 1,
+					day: 10,
+					hour: 9,
+					durationMinutes: 480
+				}),
+				jornadaEnFechaCompleta({
+					id: 2,
+					year: 2026,
+					month: 1,
+					day: 11,
+					hour: 9,
+					durationMinutes: 240
+				}),
+				jornadaEnFechaCompleta({
+					id: 3,
+					year: 2026,
+					month: 6,
+					day: 21,
+					hour: 9,
+					durationMinutes: 120
+				})
+			];
+
+			const barras = prepararDatosGrafica(jornadas, 'año');
+
+			expect(barras).toHaveLength(2);
+			expect(barras[0].label).toBe('Ene');
+			expect(barras[0].valor).toBe(12); // 720 min / 60
+			expect(barras[0].jornadas).toHaveLength(2);
+			expect(barras[1].label).toBe('Jun');
+			expect(barras[1].valor).toBe(2);
+			expect(barras[1].color).toBe('#3b82f6');
 		});
 	});
 });

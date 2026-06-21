@@ -40,11 +40,7 @@ vi.mock('$lib/stores/app-state', () => ({
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 /** Factory de jornada cerrada. */
-function jornadaCerrada(
-	id: number,
-	startTime: Date,
-	durationMinutes: number
-): Jornada {
+function jornadaCerrada(id: number, startTime: Date, durationMinutes: number): Jornada {
 	return {
 		id,
 		start_time: startTime,
@@ -178,11 +174,8 @@ describe('estadisticas/+page.svelte', () => {
 		it('muestra la gráfica (canvas) cuando hay jornadas filtradas', async () => {
 			subscribeConCallbackInmediato();
 			// Jornada de hace 5 días (dentro del periodo "mes")
-			const hace5dias = new Date();
-			hace5dias.setDate(hace5dias.getDate() - 5);
-			mocks.mockGetJornadas.mockReturnValue([
-				jornadaCerrada(1, hace5dias, 480)
-			]);
+			const hace5dias = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000);
+			mocks.mockGetJornadas.mockReturnValue([jornadaCerrada(1, hace5dias, 480)]);
 
 			render(EstadisticasPage);
 
@@ -194,11 +187,8 @@ describe('estadisticas/+page.svelte', () => {
 
 		it('no muestra mensaje de "No hay datos" cuando hay jornadas', async () => {
 			subscribeConCallbackInmediato();
-			const hace5dias = new Date();
-			hace5dias.setDate(hace5dias.getDate() - 5);
-			mocks.mockGetJornadas.mockReturnValue([
-				jornadaCerrada(1, hace5dias, 480)
-			]);
+			const hace5dias = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000);
+			mocks.mockGetJornadas.mockReturnValue([jornadaCerrada(1, hace5dias, 480)]);
 
 			render(EstadisticasPage);
 
@@ -213,8 +203,7 @@ describe('estadisticas/+page.svelte', () => {
 	describe('resumen se actualiza con jornadas filtradas', () => {
 		it('muestra el resumen con 4 tarjetas cuando hay datos', async () => {
 			subscribeConCallbackInmediato();
-			const hace5dias = new Date();
-			hace5dias.setDate(hace5dias.getDate() - 5);
+			const hace5dias = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000);
 			mocks.mockGetJornadas.mockReturnValue([
 				jornadaCerrada(1, hace5dias, 480) // 8h
 			]);

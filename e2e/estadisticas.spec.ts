@@ -5,7 +5,6 @@
  * Funcionalidades: selector de periodo, gráfica, mensaje vacío
  */
 import { test, expect } from '@playwright/test';
-import type { Jornada } from '../src/lib/db';
 
 test.describe('Tab Estadísticas (/estadisticas)', () => {
 	// ─── Navegación ─────────────────────────────────────────────────────────

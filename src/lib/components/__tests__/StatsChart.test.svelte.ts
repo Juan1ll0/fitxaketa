@@ -8,6 +8,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, cleanup, waitFor } from '@testing-library/svelte';
 import '@testing-library/jest-dom/vitest';
 import type { Jornada } from '$lib/db';
+import type { BarraGrafica } from '$lib/utils/dashboard';
 import StatsChart from '../StatsChart.svelte';
 
 // ─── Mock de chart.js ───────────────────────────────────────────────────────
@@ -23,7 +24,7 @@ const mockChartInstance = {
 
 // Mock constructor con método estático register
 // Usamos una función normal para que pueda ser instanciada con "new"
-function MockChartClass(this: typeof mockChartInstance, ...args: unknown[]) {
+function MockChartClass(this: typeof mockChartInstance) {
 	return mockChartInstance;
 }
 MockChartClass.register = mockRegister;
@@ -58,11 +59,7 @@ vi.mock('chart.js', () => ({
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 /** Factory de jornada cerrada con duration en minutos. */
-function jornadaCerrada(
-	id: number,
-	startTime: Date,
-	durationMinutes: number
-): Jornada {
+function jornadaCerrada(id: number, startTime: Date, durationMinutes: number): Jornada {
 	return {
 		id,
 		start_time: startTime,
@@ -75,6 +72,16 @@ function jornadaCerrada(
 		status: 'closed',
 		synced: 1
 	};
+}
+
+/** Convierte jornadas en BarraGrafica para los tests. */
+function aBarras(jornadas: Jornada[]): BarraGrafica[] {
+	return jornadas.map((j) => ({
+		label: `${String(new Date(j.start_time).getDate()).padStart(2, '0')}/${String(new Date(j.start_time).getMonth() + 1).padStart(2, '0')}`,
+		valor: (j.duration ?? 0) / 60,
+		color: '#3b82f6',
+		jornadas: [j]
+	}));
 }
 
 describe('StatsChart.svelte', () => {
@@ -92,13 +99,13 @@ describe('StatsChart.svelte', () => {
 
 	// ─── Renderizado básico ─────────────────────────────────────────────────
 
-	it('renderiza sin errores con jornadas válidas', async () => {
+	it('renderiza sin errores con datos válidos', async () => {
 		const jornadas: Jornada[] = [
 			jornadaCerrada(1, new Date(2026, 5, 15, 9, 0), 480),
 			jornadaCerrada(2, new Date(2026, 5, 16, 9, 0), 480)
 		];
 
-		render(StatsChart, { jornadas });
+		render(StatsChart, { datos: aBarras(jornadas), periodo: 'mes' });
 
 		await waitFor(() => {
 			const canvas = document.querySelector('canvas');
@@ -107,11 +114,9 @@ describe('StatsChart.svelte', () => {
 	});
 
 	it('muestra canvas element', async () => {
-		const jornadas: Jornada[] = [
-			jornadaCerrada(1, new Date(2026, 5, 15, 9, 0), 480)
-		];
+		const jornadas: Jornada[] = [jornadaCerrada(1, new Date(2026, 5, 15, 9, 0), 480)];
 
-		render(StatsChart, { jornadas });
+		render(StatsChart, { datos: aBarras(jornadas), periodo: 'mes' });
 
 		await waitFor(() => {
 			expect(document.querySelector('canvas')).toBeInTheDocument();
@@ -120,13 +125,11 @@ describe('StatsChart.svelte', () => {
 
 	// ─── Actualización de gráfica ────────────────────────────────────────────
 
-	it('actualiza gráfica cuando cambian las jornadas (mock de Chart.js)', async () => {
-		const jornadasInicial: Jornada[] = [
-			jornadaCerrada(1, new Date(2026, 5, 15, 9, 0), 480)
-		];
+	it('actualiza gráfica cuando cambian los datos (mock de Chart.js)', async () => {
+		const jornadasInicial: Jornada[] = [jornadaCerrada(1, new Date(2026, 5, 15, 9, 0), 480)];
 
 		// Verificar que con props iniciales, el canvas se renderiza
-		render(StatsChart, { jornadas: jornadasInicial });
+		render(StatsChart, { datos: aBarras(jornadasInicial), periodo: 'mes' });
 
 		await waitFor(() => expect(document.querySelector('canvas')).toBeInTheDocument());
 
@@ -141,11 +144,9 @@ describe('StatsChart.svelte', () => {
 	// ─── Cleanup en onDestroy ────────────────────────────────────────────────
 
 	it('limpia la instancia de Chart en onDestroy', async () => {
-		const jornadas: Jornada[] = [
-			jornadaCerrada(1, new Date(2026, 5, 15, 9, 0), 480)
-		];
+		const jornadas: Jornada[] = [jornadaCerrada(1, new Date(2026, 5, 15, 9, 0), 480)];
 
-		const { unmount } = render(StatsChart, { jornadas });
+		const { unmount } = render(StatsChart, { datos: aBarras(jornadas), periodo: 'mes' });
 
 		await waitFor(() => expect(document.querySelector('canvas')).toBeInTheDocument());
 
@@ -161,11 +162,9 @@ describe('StatsChart.svelte', () => {
 	// ─── Tooltip callbacks ───────────────────────────────────────────────────
 
 	it('registra los componentes de Chart.js', async () => {
-		const jornadas: Jornada[] = [
-			jornadaCerrada(1, new Date(2026, 5, 15, 9, 0), 480)
-		];
+		const jornadas: Jornada[] = [jornadaCerrada(1, new Date(2026, 5, 15, 9, 0), 480)];
 
-		render(StatsChart, { jornadas });
+		render(StatsChart, { datos: aBarras(jornadas), periodo: 'mes' });
 
 		await waitFor(() => {
 			expect(mockRegister).toHaveBeenCalled();
