@@ -1,5 +1,6 @@
 import { createJornada, closeJornada, getOpenJornada, getAllJornadas, type Jornada } from '$lib/db';
 import { calcularResumenDia, type ResumenDia } from '$lib/utils/dashboard';
+import { diaDeJornada, mismoDia } from '$lib/utils/fecha-negocio';
 import { appState, notificarCambio, type Periodo } from './app-state.svelte';
 
 let intervalId: ReturnType<typeof setInterval> | null = null;
@@ -25,8 +26,8 @@ function stopTimer() {
 }
 
 function calcularHoy(jornadas: Jornada[]): { hoy: Jornada[]; resumen: ResumenDia } {
-	const hoy = new Date().toDateString();
-	const filtradas = jornadas.filter((j) => new Date(j.start_time).toDateString() === hoy);
+	const ahora = new Date();
+	const filtradas = jornadas.filter((j) => mismoDia(diaDeJornada(j), ahora));
 	const resumenCerradas = calcularResumenDia(filtradas.filter((j) => j.status === 'closed'));
 	const abierta = filtradas.find((j) => j.status === 'open');
 	const minutosAbierta = abierta

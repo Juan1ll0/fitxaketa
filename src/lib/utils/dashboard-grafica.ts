@@ -2,6 +2,7 @@ import type { Jornada } from '$lib/db';
 import type { Periodo } from '$lib/stores/app-state';
 import type { DatosGrafica, DatasetGrafica } from '$lib/utils/dashboard-types';
 import { obtenerRangoPeriodo } from '$lib/utils/dashboard-periodo';
+import { inicioDia, claveDia, diaDeJornada } from '$lib/utils/fecha-negocio';
 
 const NOMBRES_MES_CORTO = [
 	'Ene',
@@ -22,13 +23,6 @@ const COLOR_PRIMARIO = '#3b82f6';
 const COLOR_EXITO = '#22c55e';
 const COLORES_STACK = [COLOR_PRIMARIO, COLOR_EXITO];
 
-function claveDia(fecha: Date): string {
-	const year = fecha.getFullYear();
-	const month = String(fecha.getMonth() + 1).padStart(2, '0');
-	const day = String(fecha.getDate()).padStart(2, '0');
-	return `${year}-${month}-${day}`;
-}
-
 function etiquetaDia(fecha: Date, periodo: Periodo): string {
 	const day = String(fecha.getDate()).padStart(2, '0');
 	if (periodo === 'mes' || periodo === 'semana') {
@@ -39,8 +33,7 @@ function etiquetaDia(fecha: Date, periodo: Periodo): string {
 }
 
 function datosStacked(jornadas: Jornada[], periodo: Periodo): DatosGrafica {
-	const hoy = new Date();
-	hoy.setHours(0, 0, 0, 0);
+	const hoy = inicioDia(new Date());
 	const { inicio, fin } = obtenerRangoPeriodo(periodo, hoy);
 
 	const diasUnicos: string[] = [];
@@ -57,9 +50,7 @@ function datosStacked(jornadas: Jornada[], periodo: Periodo): DatosGrafica {
 	}
 
 	for (const jornada of jornadas) {
-		const fecha = new Date(jornada.start_time);
-		fecha.setHours(0, 0, 0, 0);
-		const key = claveDia(fecha);
+		const key = claveDia(diaDeJornada(jornada));
 		if (jornadasPorDia.has(key)) {
 			jornadasPorDia.get(key)!.push(jornada);
 		}
@@ -98,7 +89,7 @@ function datosStacked(jornadas: Jornada[], periodo: Periodo): DatosGrafica {
 function datosPorMes(jornadas: Jornada[]): DatosGrafica {
 	const porMes = new Map<number, Jornada[]>(Array.from({ length: 12 }, (_, i) => [i, []]));
 	for (const jornada of jornadas) {
-		const mes = new Date(jornada.start_time).getMonth();
+		const mes = diaDeJornada(jornada).getMonth();
 		porMes.get(mes)!.push(jornada);
 	}
 

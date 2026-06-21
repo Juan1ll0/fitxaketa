@@ -1,5 +1,6 @@
 import type { Jornada } from '$lib/db';
 import type { ResumenDia, ResumenPeriodo } from '$lib/utils/dashboard-types';
+import { inicioDia, diaDeJornada } from '$lib/utils/fecha-negocio';
 
 export function calcularResumenDia(jornadas: Jornada[]): ResumenDia {
 	const totalMinutos = jornadas.reduce((acc, jornada) => acc + (jornada.duration ?? 0), 0);
@@ -15,14 +16,12 @@ export function agruparPorDia(jornadas: Jornada[]): Map<string, Jornada[]> {
 	);
 
 	const grupos = new Map<string, Jornada[]>();
-	const hoy = new Date();
-	hoy.setHours(0, 0, 0, 0);
+	const hoy = inicioDia(new Date());
 	const ayer = new Date(hoy);
 	ayer.setDate(ayer.getDate() - 1);
 
 	for (const jornada of jornadasOrdenadas) {
-		const fecha = new Date(jornada.start_time);
-		fecha.setHours(0, 0, 0, 0);
+		const fecha = diaDeJornada(jornada);
 
 		let key: string;
 		if (fecha.getTime() === hoy.getTime()) {
@@ -55,13 +54,7 @@ export function calcularResumenPeriodo(jornadas: Jornada[]): ResumenPeriodo {
 
 	// Solo contar días de jornadas cerradas
 	const diasTrabajados = new Set(
-		jornadas
-			.filter((j) => j.status === 'closed')
-			.map((jornada) => {
-				const fecha = new Date(jornada.start_time);
-				fecha.setHours(0, 0, 0, 0);
-				return fecha.getTime();
-			})
+		jornadas.filter((j) => j.status === 'closed').map((jornada) => diaDeJornada(jornada).getTime())
 	).size;
 
 	const totalHoras = totalMinutos / 60;
