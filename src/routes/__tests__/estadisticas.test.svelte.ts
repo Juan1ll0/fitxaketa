@@ -2,7 +2,7 @@
  * Tests para /estadisticas (+page.svelte)
  *
  * Mock del store global app-state:
- *   subscribe, getJornadas, getPeriodoSeleccionado, setPeriodo, cargarJornadas
+ *   subscribe, getJornadas, appState, setPeriodo, cargarJornadas
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, cleanup, fireEvent, screen, waitFor } from '@testing-library/svelte';
@@ -16,25 +16,27 @@ import EstadisticasPage from '../../routes/estadisticas/+page.svelte';
 const mocks = vi.hoisted(() => {
 	const mockSubscribe = vi.fn();
 	const mockGetJornadas = vi.fn<() => Jornada[]>().mockReturnValue([] as Jornada[]);
-	const mockGetPeriodoSeleccionado = vi.fn<() => Periodo>().mockReturnValue('mes' as Periodo);
 	const mockSetPeriodo = vi.fn<(p: Periodo) => void>();
 	const mockCargarJornadas = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
+	const mockAppState = {
+		periodoSeleccionado: 'mes' as Periodo
+	};
 
 	return {
 		mockSubscribe,
 		mockGetJornadas,
-		mockGetPeriodoSeleccionado,
 		mockSetPeriodo,
-		mockCargarJornadas
+		mockCargarJornadas,
+		mockAppState
 	};
 });
 
 vi.mock('$lib/stores/app-state', () => ({
 	subscribe: mocks.mockSubscribe,
 	getJornadas: mocks.mockGetJornadas,
-	getPeriodoSeleccionado: mocks.mockGetPeriodoSeleccionado,
 	setPeriodo: mocks.mockSetPeriodo,
-	cargarJornadas: mocks.mockCargarJornadas
+	cargarJornadas: mocks.mockCargarJornadas,
+	appState: mocks.mockAppState
 }));
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -67,7 +69,7 @@ describe('estadisticas/+page.svelte', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		mocks.mockGetJornadas.mockReturnValue([]);
-		mocks.mockGetPeriodoSeleccionado.mockReturnValue('mes');
+		mocks.mockAppState.periodoSeleccionado = 'mes';
 		mocks.mockCargarJornadas.mockResolvedValue(undefined);
 		mocks.mockSubscribe.mockReturnValue(vi.fn());
 	});
@@ -96,7 +98,7 @@ describe('estadisticas/+page.svelte', () => {
 	describe('"Mes" está seleccionado por defecto', () => {
 		it('el botón Mes tiene el estilo de activo (bg-primary)', async () => {
 			subscribeConCallbackInmediato();
-			mocks.mockGetPeriodoSeleccionado.mockReturnValue('mes');
+			mocks.mockAppState.periodoSeleccionado = 'mes';
 
 			render(EstadisticasPage);
 
@@ -108,7 +110,7 @@ describe('estadisticas/+page.svelte', () => {
 
 		it('los otros botones no tienen bg-primary', async () => {
 			subscribeConCallbackInmediato();
-			mocks.mockGetPeriodoSeleccionado.mockReturnValue('mes');
+			mocks.mockAppState.periodoSeleccionado = 'mes';
 
 			render(EstadisticasPage);
 
@@ -126,7 +128,7 @@ describe('estadisticas/+page.svelte', () => {
 	describe('cambiar periodo actualiza el resumen', () => {
 		it('llama a setPeriodo al hacer clic en "Semana"', async () => {
 			subscribeConCallbackInmediato();
-			mocks.mockGetPeriodoSeleccionado.mockReturnValue('mes');
+			mocks.mockAppState.periodoSeleccionado = 'mes';
 
 			render(EstadisticasPage);
 
@@ -142,7 +144,7 @@ describe('estadisticas/+page.svelte', () => {
 
 		it('llama a setPeriodo al hacer clic en "Año"', async () => {
 			subscribeConCallbackInmediato();
-			mocks.mockGetPeriodoSeleccionado.mockReturnValue('mes');
+			mocks.mockAppState.periodoSeleccionado = 'mes';
 
 			render(EstadisticasPage);
 

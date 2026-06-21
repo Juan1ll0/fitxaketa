@@ -3,9 +3,9 @@
 	import {
 		subscribe,
 		getJornadas,
-		getPeriodoSeleccionado,
 		setPeriodo,
 		cargarJornadas,
+		appState,
 		type Periodo
 	} from '$lib/stores/app-state';
 	import {
@@ -19,8 +19,8 @@
 	import StatsChart from '$lib/components/StatsChart.svelte';
 
 	let jornadas = $state<Jornada[]>([]);
-	let periodo = $state<Periodo>('mes');
 
+	let periodo = $derived(appState.periodoSeleccionado);
 	let jornadasFiltradas = $derived(filtrarPorPeriodo(jornadas, periodo));
 	let resumen = $derived(calcularResumenPeriodo(jornadasFiltradas));
 	let datosGrafica = $derived(prepararDatosGrafica(jornadasFiltradas, periodo));
@@ -35,7 +35,6 @@
 	$effect(() => {
 		const unsubscribe = subscribe(() => {
 			jornadas = getJornadas();
-			periodo = getPeriodoSeleccionado();
 		});
 		return unsubscribe;
 	});
