@@ -1,7 +1,7 @@
 import type { Jornada } from '$lib/db';
 import type { Periodo } from '$lib/stores/app-state';
 
-function obtenerRangoPeriodo(periodo: Periodo, hoy: Date): { inicio: Date; fin: Date } {
+export function obtenerRangoPeriodo(periodo: Periodo, hoy: Date): { inicio: Date; fin: Date } {
 	const inicio = new Date(hoy);
 	const fin = new Date(hoy);
 

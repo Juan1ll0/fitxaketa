@@ -12,9 +12,14 @@ export interface ResumenPeriodo {
 	totalJornadas: number;
 }
 
-export interface BarraGrafica {
+export interface DatasetGrafica {
 	label: string;
-	valor: number;
-	color: string;
-	jornadas: Jornada[];
+	data: number[];
+	backgroundColor: string;
+	jornadasPorLabel: (Jornada | Jornada[] | null)[];
+}
+
+export interface DatosGrafica {
+	labels: string[];
+	datasets: DatasetGrafica[];
 }

@@ -648,46 +648,57 @@ describe('dashboard utils', () => {
 			};
 		}
 
-		it('genera una barra por jornada y alterna colores por día', () => {
+		it('genera datasets apilados con todos los días de la semana', () => {
+			const hoy = new Date(2026, 5, 21); // Domingo 21 junio 2026
+
 			const jornadas: Jornada[] = [
 				jornadaEnFechaCompleta({
 					id: 1,
 					year: 2026,
 					month: 6,
-					day: 23,
+					day: 15,
 					hour: 9,
 					durationMinutes: 240
-				}), // primer jornada del día → azul
+				}),
 				jornadaEnFechaCompleta({
 					id: 2,
 					year: 2026,
 					month: 6,
-					day: 23,
+					day: 15,
 					hour: 14,
 					durationMinutes: 120
-				}), // segunda del día → verde
+				}),
 				jornadaEnFechaCompleta({
 					id: 3,
 					year: 2026,
 					month: 6,
-					day: 24,
+					day: 16,
 					hour: 9,
 					durationMinutes: 480
-				}) // nuevo día → azul
+				})
 			];
 
-			const barras = prepararDatosGrafica(jornadas, 'semana');
+			const nowMock = vi.spyOn(Date, 'now').mockReturnValue(hoy.getTime());
+			try {
+				const datos = prepararDatosGrafica(jornadas, 'semana');
 
-			expect(barras).toHaveLength(3);
-			expect(barras[0].label).toBe('23/06');
-			expect(barras[0].valor).toBe(4);
-			expect(barras[0].color).toBe('#3b82f6');
-			expect(barras[1].color).toBe('#22c55e');
-			expect(barras[2].label).toBe('24/06');
-			expect(barras[2].color).toBe('#3b82f6');
+				expect(datos.labels).toHaveLength(7); // 7 días de la semana
+				expect(datos.labels[0]).toBe('15/06'); // Lunes
+				expect(datos.labels[6]).toBe('21/06'); // Domingo
+				expect(datos.datasets).toHaveLength(2); // Max 2 jornadas en un día
+				expect(datos.datasets[0].label).toBe('Jornada 1');
+				expect(datos.datasets[0].backgroundColor).toBe('#3b82f6');
+				expect(datos.datasets[0].data[0]).toBe(4); // 15 junio: 4h
+				expect(datos.datasets[0].data[1]).toBe(8); // 16 junio: 8h
+				expect(datos.datasets[0].data[2]).toBe(0); // 17 junio: 0h
+				expect(datos.datasets[1].data[0]).toBe(2); // 15 junio: 2h (2ª jornada)
+				expect(datos.datasets[1].data[1]).toBe(0); // 16 junio: 0h
+			} finally {
+				nowMock.mockRestore();
+			}
 		});
 
-		it('agrupa jornadas por mes para el periodo anual', () => {
+		it('genera 12 etiquetas para el periodo anual', () => {
 			const jornadas: Jornada[] = [
 				jornadaEnFechaCompleta({
 					id: 1,
@@ -715,15 +726,27 @@ describe('dashboard utils', () => {
 				})
 			];
 
-			const barras = prepararDatosGrafica(jornadas, 'año');
+			const datos = prepararDatosGrafica(jornadas, 'año');
 
-			expect(barras).toHaveLength(2);
-			expect(barras[0].label).toBe('Ene');
-			expect(barras[0].valor).toBe(12); // 720 min / 60
-			expect(barras[0].jornadas).toHaveLength(2);
-			expect(barras[1].label).toBe('Jun');
-			expect(barras[1].valor).toBe(2);
-			expect(barras[1].color).toBe('#3b82f6');
+			expect(datos.labels).toEqual([
+				'Ene',
+				'Feb',
+				'Mar',
+				'Abr',
+				'May',
+				'Jun',
+				'Jul',
+				'Ago',
+				'Sep',
+				'Oct',
+				'Nov',
+				'Dic'
+			]);
+			expect(datos.datasets).toHaveLength(1);
+			expect(datos.datasets[0].data[0]).toBe(12); // Enero: 12h
+			expect(datos.datasets[0].data[5]).toBe(2); // Junio: 2h
+			expect(datos.datasets[0].data[1]).toBe(0); // Febrero: 0h
+			expect(datos.datasets[0].backgroundColor).toBe('#3b82f6');
 		});
 	});
 });
