@@ -36,6 +36,12 @@ export default ts.config(
 			'svelte/no-navigation-without-resolve': 'off'
 		}
 	},
+	{
+		files: ['src/**/*.svelte.ts'],
+		languageOptions: {
+			parser: ts.parser
+		}
+	},
 
 	// Marcadores de calidad mecánicos — ver .agents/skills/coding-standards.md
 	// Estos límites son gates: el lint falla, no se negocia con el agente.

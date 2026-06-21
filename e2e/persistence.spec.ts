@@ -13,7 +13,7 @@ test.describe('Persistencia del contador de fichaje', () => {
 		await expect(stopButton).toBeVisible();
 
 		await page.goto('/registros');
-		await expect(page.getByRole('heading', { name: /Registros/i })).toBeVisible();
+		await expect(page.getByRole('heading', { name: /Historial/i })).toBeVisible();
 
 		await page.goto('/');
 		await expect(stopButton).toBeVisible();
