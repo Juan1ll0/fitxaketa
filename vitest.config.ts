@@ -6,7 +6,8 @@ export default defineConfig({
 	plugins: [svelte({ hot: !process.env.VITEST })],
 	resolve: {
 		alias: {
-			$lib: path.resolve('./src/lib')
+			$lib: path.resolve('./src/lib'),
+			'$app/navigation': path.resolve('./tests/mocks/$app-navigation.ts')
 		},
 		conditions: ['browser']
 	},
