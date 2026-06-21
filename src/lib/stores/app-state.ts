@@ -1,5 +1,6 @@
 import { createJornada, closeJornada, getOpenJornada, getAllJornadas, type Jornada } from '$lib/db';
-import { appState, notificarCambio, type Periodo, type ResumenDia } from './app-state.svelte';
+import { calcularResumenDia, type ResumenDia } from '$lib/utils/dashboard';
+import { appState, notificarCambio, type Periodo } from './app-state.svelte';
 
 let intervalId: ReturnType<typeof setInterval> | null = null;
 
@@ -26,15 +27,18 @@ function stopTimer() {
 function calcularHoy(jornadas: Jornada[]): { hoy: Jornada[]; resumen: ResumenDia } {
 	const hoy = new Date().toDateString();
 	const filtradas = jornadas.filter((j) => new Date(j.start_time).toDateString() === hoy);
-	const totalMinutos = filtradas.reduce(
-		(acc, j) => acc + (j.duration ?? Math.floor((Date.now() - j.start_time.getTime()) / 60000)),
-		0
-	);
+	const resumenCerradas = calcularResumenDia(filtradas.filter((j) => j.status === 'closed'));
+	const abierta = filtradas.find((j) => j.status === 'open');
+	const minutosAbierta = abierta
+		? Math.floor((Date.now() - abierta.start_time.getTime()) / 60000)
+		: 0;
+	const totalHoras =
+		Math.round(((resumenCerradas.totalHoras * 60 + minutosAbierta) / 60) * 100) / 100;
 	return {
 		hoy: filtradas,
 		resumen: {
-			totalHoras: Math.round((totalMinutos / 60) * 100) / 100,
-			numeroJornadas: filtradas.length
+			totalHoras,
+			totalJornadas: resumenCerradas.totalJornadas + (abierta ? 1 : 0)
 		}
 	};
 }
@@ -115,6 +119,7 @@ export {
 	getJornadasHoy,
 	getResumenHoy,
 	getPeriodoSeleccionado,
-	type Periodo,
-	type ResumenDia
+	type Periodo
 } from './app-state.svelte';
+
+export type { ResumenDia } from '$lib/utils/dashboard';
