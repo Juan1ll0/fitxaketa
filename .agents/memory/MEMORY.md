@@ -142,3 +142,53 @@ Ambas listas para ser implementadas en sub-specs 003.3 y 003.4 respectivamente.
 ### Diferencia con el plan original
 
 - **`--color-border`:** El plan especificaba `#1e293b` (mismo que `--color-surface-light`), se implementó como `#334155` para que el borde sea distinguible del fondo.
+
+## 2026-06-21 — Sub-spec 003.2: Tab Fichar (pantalla de fichaje)
+
+### Utilidades de dashboard en `src/lib/utils/dashboard.ts`
+
+Archivo nuevo con funciones helper para la UI:
+
+- **`formatearFecha(date: Date): string`** — Usa `Intl.DateTimeFormat('es-ES')` con `weekday: 'long'`, `year: 'numeric'`, `month: 'long'`, `day: 'numeric'`. Retorna formato español (ej: "domingo, 21 de junio de 2026").
+- **`calcularResumenDia(jornadas: Jornada[]): ResumenDia`** — Suma `jornada.duration` (en minutos) de todas las jornadas del array, calcula `totalHoras` (minutos / 60) y `totalJornadas` (longitud del array).
+- **Interface `ResumenDia`** con `totalHoras: number` y `totalJornadas: number`.
+
+Esta función es consumida tanto por el tab Fichar (para mostrar "Hoy: Xh Ym | N jornadas") como por el store (`app-state.ts`) en `cargarJornadas()` para calcular `resumenHoy`.
+
+### Pantalla completa del tab Fichar (`src/routes/+page.svelte`)
+
+La página principal del tab Fichar contiene:
+
+1. **Fecha actual formateada** — `<p class="text-lg text-text-muted">{hoy}</p>` en la parte superior. Se actualiza vía `setInterval` cada 60 segundos (solo si cambia el día).
+2. **Cronómetro grande centrado** — `<p class="font-mono text-6xl font-bold tabular-nums">` con `tracking-wider`. Muestra el valor de `getElapsed()` (formato `HH:MM:SS`).
+3. **Indicador de estado** — Muestra "Trabajando" con `text-primary` cuando `clockedIn` es `true`, o "Descansando" con `text-text-muted` cuando es `false`.
+4. **Botón Start/Stop** — Texto dinámico: "Fichar entrada" / "Fichar salida". Color dinámico con `class:bg-primary` / `class:bg-danger` usando clases condicionales de Svelte. Llama a `startJornada()` o `stopJornada()` según el estado.
+5. **Resumen del día** — `<p class="text-sm">Hoy: Xh Ym | N jornadas</p>` usando `resumen.totalHoras` (parte entera y minutos) y `jornadasHoy.length` con pluralización (`jornada` / `jornadas`).
+
+### `ssr = false` en `+page.ts` separado de `+page.svelte`
+
+SvelteKit no permite `export const ssr = false` dentro de un fichero `.svelte` — ESLint con la regla `svelte/valid-prop-names-in-kit-pages` lo rechaza. Se creó `src/routes/+page.ts` con contenido exclusivo:
+
+```ts
+export const ssr = false;
+```
+
+Esto mantiene el componente `+page.svelte` limpio de exports de configuración y evita warnings de ESLint.
+
+### Tests de componente con Svelte 5 + vi.mock()
+
+Los tests en `src/routes/__tests__/page.test.ts` cubren el comportamiento completo del tab Fichar:
+
+- **Problema resuelto:** `onMount` ejecuta `await initAppState()` que es asíncrono. Las aserciones directas fallan porque el render no ha completado la inicialización. Solución: usar `await waitFor(() => expect(...))` de `@testing-library/svelte` para esperar a que el DOM se actualice tras resolver la promesa.
+- **Mocking del store:** Se usa `vi.hoisted()` para declarar variables mock antes del hoisting de `vi.mock()`. Esto evita errores de referencia cíclica. Los mocks se configuran con valores por defecto en `beforeEach()` y se redefinen por test.
+- **Patrón de suscripción:** Los tests mockean `subscribe()` capturando el callback para simular cambios de estado. Ejemplo: elegir el callback, mutar el mock de `getClockedIn()`, invocar el callback, y verificar con `waitFor` que el botón cambia de texto.
+- **Ubicación del test:** `src/routes/__tests__/page.test.ts` (colocalizado con la ruta, no en `src/lib/components/`) para evitar violación de capas según dependency-cruiser — los tests de página pertenecen a la capa de rutas.
+- **Casos cubiertos:** cronómetro se actualiza, botón cambia texto y color según estado, resumen del día con singular/plural, fecha formateada, initAppState en onMount, suscripción reactiva, cleanup con onDestroy, estado "Trabajando"/"Descansando".
+
+### Store global extendido (continuación de 003.1)
+
+El store de `app-state.ts` se beneficia de:
+
+- **`getJornadasHoy()`** y **`getResumenHoy()`** — getters públicos desde `app-state.svelte.ts`. El tab Fichar los llama dentro del callback de `subscribe()` para mantener reactividad.
+- **`calcularResumenDia()`** se invoca desde `cargarJornadas()` en `app-state.ts` para recalcular `resumenHoy` y `jornadasHoy` cada vez que cambian los datos (fichaje nuevo, recarga desde Dexie).
+- Esta centralización evita lógica duplicada: el cálculo del resumen del día ocurre en un solo lugar y tanto el tab Fichar como futuros tabs (Historial, Estadísticas) lo consumen vía el store.
