@@ -31,7 +31,7 @@ function claveDia(fecha: Date): string {
 
 function etiquetaDia(fecha: Date, periodo: Periodo): string {
 	const day = String(fecha.getDate()).padStart(2, '0');
-	if (periodo === 'mes') {
+	if (periodo === 'mes' || periodo === 'semana') {
 		return day;
 	}
 	const month = String(fecha.getMonth() + 1).padStart(2, '0');
