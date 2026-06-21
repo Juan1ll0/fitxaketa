@@ -198,6 +198,7 @@ El store de `app-state.ts` se beneficia de:
 ### Utils de dashboard modularizadas
 
 Utils de dashboard refactorizadas en módulos cohesivos (`src/lib/utils/dashboard-*.ts`) con barrel `dashboard.ts`:
+
 - `dashboard-types.ts` — interfaces `ResumenDia`, `BarraGrafica`
 - `dashboard-format.ts` — formateadores (`formatearFecha`, `formatearFechaLarga`, `formatearHora`, `formatearDuracion`, `formatearHorasDecimal`)
 - `dashboard-calc.ts` — cálculos (`calcularResumenDia`, `agruparPorDia`, `calcularResumenPeriodo`)

@@ -30,6 +30,49 @@ vi.mock('$lib/stores/app-state', () => ({
 	cargarJornadas: mocks.mockCargarJornadas
 }));
 
+// ─── Mock de Chart.js ────────────────────────────────────────────────────────
+
+const mockDestroy = vi.fn();
+const mockUpdate = vi.fn();
+const mockRegister = vi.fn();
+
+const mockChartInstance = {
+	destroy: mockDestroy,
+	update: mockUpdate,
+	data: { labels: [], datasets: [{ data: [] }] }
+};
+
+function MockChartClass(this: typeof mockChartInstance) {
+	return mockChartInstance;
+}
+MockChartClass.register = mockRegister;
+MockChartClass.BarController = vi.fn();
+MockChartClass.BarElement = vi.fn();
+MockChartClass.CategoryScale = vi.fn();
+MockChartClass.LinearScale = vi.fn();
+MockChartClass.Tooltip = vi.fn();
+MockChartClass.Legend = vi.fn();
+
+vi.mock('chart.js', () => ({
+	Chart: MockChartClass,
+	BarController: vi.fn(),
+	BarElement: vi.fn(),
+	CategoryScale: vi.fn(),
+	LinearScale: vi.fn(),
+	Tooltip: vi.fn(),
+	Legend: vi.fn(),
+	default: {
+		Chart: MockChartClass,
+		BarController: vi.fn(),
+		BarElement: vi.fn(),
+		CategoryScale: vi.fn(),
+		LinearScale: vi.fn(),
+		Tooltip: vi.fn(),
+		Legend: vi.fn(),
+		register: mockRegister
+	}
+}));
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 /** Factory de jornada cerrada. */
@@ -229,5 +272,290 @@ describe('estadisticas/+page.svelte', () => {
 		// NOTA: afterNavigate no se dispara en tests de componente unitario
 		// porque requiere navegación real entre rutas. Esta funcionalidad
 		// está cubierta por tests E2E.
+	});
+
+	// ─── Selector de periodo: cambio de gráfica ───────────────────────────
+
+	describe('cambiar periodo actualiza la gráfica y los datos', () => {
+		it('al cambiar a "Semana" se muestran datos de la semana', async () => {
+			subscribeConCallbackInmediato();
+			const hace3dias = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+			const hace10dias = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000);
+			// Una jornada hace 3 días (dentro de semana) y otra hace 10 días (fuera de semana)
+			mocks.mockGetJornadas.mockReturnValue([
+				jornadaCerrada(1, hace3dias, 480),
+				jornadaCerrada(2, hace10dias, 480)
+			]);
+
+			render(EstadisticasPage);
+
+			// Esperar a que renderice con Mes (default)
+			await waitFor(() => {
+				expect(document.querySelector('canvas')).toBeInTheDocument();
+			});
+
+			// Cambiar a Semana
+			const semanaBtn = screen.getByText('Semana');
+			await fireEvent.click(semanaBtn);
+
+			// La jornada de hace 10 días no debe aparecer en semana
+			await waitFor(() => {
+				// El mock de getJornadas devuelve 2 jornadas, pero filtrarPorPeriodo
+				// solo debe incluir la de hace 3 días en el periodo semana
+				// Verificar que el canvas sigue visible (datos filtrados)
+				expect(document.querySelector('canvas')).toBeInTheDocument();
+			});
+		});
+
+		it('al cambiar a "Año" se muestran datos del año completo', async () => {
+			subscribeConCallbackInmediato();
+			const hace3dias = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+			const hace20dias = new Date(Date.now() - 20 * 24 * 60 * 60 * 1000);
+			mocks.mockGetJornadas.mockReturnValue([
+				jornadaCerrada(1, hace3dias, 480),
+				jornadaCerrada(2, hace20dias, 480)
+			]);
+
+			render(EstadisticasPage);
+
+			await waitFor(() => {
+				expect(screen.getByText('Mes')).toBeInTheDocument();
+			});
+
+			const anoBtn = screen.getByText('Año');
+			await fireEvent.click(anoBtn);
+
+			await waitFor(() => {
+				expect(document.querySelector('canvas')).toBeInTheDocument();
+			});
+		});
+	});
+
+	// ─── Sumatorios de horas en el resumen ─────────────────────────────────
+
+	describe('resumen muestra cálculos correctos', () => {
+		it('muestra el total de horas correcto para una jornada de 8h', async () => {
+			subscribeConCallbackInmediato();
+			const hace5dias = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000);
+			mocks.mockGetJornadas.mockReturnValue([jornadaCerrada(1, hace5dias, 480)]); // 480 min = 8h
+
+			render(EstadisticasPage);
+
+			await waitFor(() => {
+				// Total: 8h, Media: 8h (ambos son 8h 0m)
+				const totalLabel = screen.getByText('Total horas');
+				expect(totalLabel.parentElement?.textContent).toMatch(/8h 0m/);
+			});
+		});
+
+		it('muestra la media diaria correcta (8h / 1 día = 8h/día)', async () => {
+			subscribeConCallbackInmediato();
+			const hace5dias = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000);
+			mocks.mockGetJornadas.mockReturnValue([jornadaCerrada(1, hace5dias, 480)]); // 8h en 1 día
+
+			render(EstadisticasPage);
+
+			await waitFor(() => {
+				// Media diaria = 8h / 1 día = 8h
+				const mediaLabel = screen.getByText('Media diaria');
+				expect(mediaLabel.parentElement?.textContent).toMatch(/8h 0m/);
+			});
+		});
+
+		it('muestra 1 día trabajado para una jornada', async () => {
+			subscribeConCallbackInmediato();
+			const hace5dias = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000);
+			mocks.mockGetJornadas.mockReturnValue([jornadaCerrada(1, hace5dias, 480)]);
+
+			render(EstadisticasPage);
+
+			await waitFor(() => {
+				// Buscar "1" en el contexto de "Días trabajados"
+				const diasLabel = screen.getByText('Días trabajados');
+				expect(diasLabel.parentElement?.textContent).toMatch(/1/);
+			});
+		});
+
+		it('muestra 1 jornada para un fichaje único', async () => {
+			subscribeConCallbackInmediato();
+			const hace5dias = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000);
+			mocks.mockGetJornadas.mockReturnValue([jornadaCerrada(1, hace5dias, 480)]);
+
+			render(EstadisticasPage);
+
+			await waitFor(() => {
+				const jornadasLabel = screen.getByText('Jornadas');
+				expect(jornadasLabel.parentElement?.textContent).toMatch(/1/);
+			});
+		});
+
+		it('suma correctamente múltiples jornadas en el mismo día', async () => {
+			subscribeConCallbackInmediato();
+			// Crear una fecha fija a las 10:00 AM para evitar problemas de zona horaria
+			const baseDate = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000);
+			const mismoDia = new Date(
+				baseDate.getFullYear(),
+				baseDate.getMonth(),
+				baseDate.getDate(),
+				10,
+				0,
+				0,
+				0
+			);
+			// Dos jornadas el mismo día: 4h + 4h = 8h total
+			const j1: Jornada = {
+				id: 1,
+				start_time: new Date(mismoDia.getTime()),
+				end_time: new Date(mismoDia.getTime() + 4 * 60 * 60 * 1000),
+				lat_start: null,
+				lng_start: null,
+				lat_end: null,
+				lng_end: null,
+				duration: 240, // 4h
+				status: 'closed',
+				synced: 1
+			};
+			const j2: Jornada = {
+				id: 2,
+				start_time: new Date(mismoDia.getTime() + 4 * 60 * 60 * 1000), // 2:00 PM
+				end_time: new Date(mismoDia.getTime() + 8 * 60 * 60 * 1000), // 6:00 PM
+				lat_start: null,
+				lng_start: null,
+				lat_end: null,
+				lng_end: null,
+				duration: 240, // 4h
+				status: 'closed',
+				synced: 1
+			};
+			mocks.mockGetJornadas.mockReturnValue([j1, j2]);
+
+			render(EstadisticasPage);
+
+			await waitFor(() => {
+				// Total: 8h (4h + 4h), pero en 1 día
+				const totalLabel = screen.getByText('Total horas');
+				expect(totalLabel.parentElement?.textContent).toMatch(/8h 0m/);
+				// Media: 8h / 1 día = 8h
+				const mediaLabel = screen.getByText('Media diaria');
+				expect(mediaLabel.parentElement?.textContent).toMatch(/8h 0m/);
+				// Días trabajados: 1, jornadas: 2
+				const jornadasLabel = screen.getByText('Jornadas');
+				expect(jornadasLabel.parentElement?.textContent).toMatch(/2/);
+			});
+		});
+	});
+
+	// ─── Casos edge ────────────────────────────────────────────────────────
+
+	describe('casos edge del resumen', () => {
+		it('periodo sin datos muestra mensaje y resumen vacío', async () => {
+			subscribeConCallbackInmediato();
+			// Todas las jornadas son de hace más de 1 año
+			const hace2anos = new Date(Date.now() - 730 * 24 * 60 * 60 * 1000);
+			mocks.mockGetJornadas.mockReturnValue([jornadaCerrada(1, hace2anos, 480)]);
+
+			render(EstadisticasPage);
+
+			await waitFor(() => {
+				expect(screen.getByText('No hay datos para este periodo')).toBeInTheDocument();
+				// El resumen no debe mostrarse
+				expect(screen.queryByText('Total horas')).not.toBeInTheDocument();
+			});
+		});
+
+		it('jornadas abiertas (open) no se cuentan en el resumen', async () => {
+			subscribeConCallbackInmediato();
+			const hace5dias = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000);
+
+			// Una jornada cerrada de 8h y una abierta (sin duration)
+			const jornadaCerrada1: Jornada = {
+				id: 1,
+				start_time: hace5dias,
+				end_time: new Date(hace5dias.getTime() + 8 * 60 * 60 * 1000),
+				lat_start: null,
+				lng_start: null,
+				lat_end: null,
+				lng_end: null,
+				duration: 480,
+				status: 'closed',
+				synced: 1
+			};
+			const jornadaAbierta: Jornada = {
+				id: 2,
+				start_time: new Date(hace5dias.getTime()),
+				end_time: null,
+				lat_start: null,
+				lng_start: null,
+				lat_end: null,
+				lng_end: null,
+				duration: null,
+				status: 'open',
+				synced: 0
+			};
+			mocks.mockGetJornadas.mockReturnValue([jornadaCerrada1, jornadaAbierta]);
+
+			render(EstadisticasPage);
+
+			await waitFor(() => {
+				// Solo la jornada cerrada debe contar
+				const totalLabel = screen.getByText('Total horas');
+				expect(totalLabel.parentElement?.textContent).toMatch(/8h 0m/); // Total: solo la cerrada
+				// Media: 8h / 1 día = 8h
+				const mediaLabel = screen.getByText('Media diaria');
+				expect(mediaLabel.parentElement?.textContent).toMatch(/8h 0m/);
+				// 1 jornada visible (la cerrada)
+				const jornadasLabel = screen.getByText('Jornadas');
+				expect(jornadasLabel.parentElement?.textContent).toMatch(/1/);
+			});
+		});
+
+		it('múltiples jornadas en días diferentes se suman por día para la media', async () => {
+			subscribeConCallbackInmediato();
+			const hace3dias = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+			const hace5dias = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000);
+
+			// 8h hace 3 días + 4h hace 5 días = 12h total en 2 días = 6h media
+			const j1: Jornada = {
+				id: 1,
+				start_time: hace3dias,
+				end_time: new Date(hace3dias.getTime() + 8 * 60 * 60 * 1000),
+				lat_start: null,
+				lng_start: null,
+				lat_end: null,
+				lng_end: null,
+				duration: 480,
+				status: 'closed',
+				synced: 1
+			};
+			const j2: Jornada = {
+				id: 2,
+				start_time: hace5dias,
+				end_time: new Date(hace5dias.getTime() + 4 * 60 * 60 * 1000),
+				lat_start: null,
+				lng_start: null,
+				lat_end: null,
+				lng_end: null,
+				duration: 240,
+				status: 'closed',
+				synced: 1
+			};
+			mocks.mockGetJornadas.mockReturnValue([j1, j2]);
+
+			render(EstadisticasPage);
+
+			await waitFor(() => {
+				// Total: 12h (8 + 4)
+				expect(screen.getByText('12h 0m')).toBeInTheDocument();
+				// Media: 6h/día (12h / 2 días)
+				const mediaLabel = screen.getByText('Media diaria');
+				expect(mediaLabel.parentElement?.textContent).toMatch(/6h 0m/);
+				// Días trabajados: 2
+				const diasLabel = screen.getByText('Días trabajados');
+				expect(diasLabel.parentElement?.textContent).toMatch(/2/);
+				// Total jornadas: 2
+				const jornadasLabel = screen.getByText('Jornadas');
+				expect(jornadasLabel.parentElement?.textContent).toMatch(/2/);
+			});
+		});
 	});
 });

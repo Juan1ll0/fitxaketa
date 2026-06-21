@@ -48,14 +48,22 @@ export function calcularResumenPeriodo(jornadas: Jornada[]): ResumenPeriodo {
 	if (jornadas.length === 0)
 		return { totalHoras: 0, mediaDiaria: 0, diasTrabajados: 0, totalJornadas: 0 };
 
-	const totalMinutos = jornadas.reduce((acc, jornada) => acc + (jornada.duration ?? 0), 0);
+	// Solo contar horas de jornadas cerradas
+	const totalMinutos = jornadas
+		.filter((j) => j.status === 'closed')
+		.reduce((acc, jornada) => acc + (jornada.duration ?? 0), 0);
+
+	// Solo contar días de jornadas cerradas
 	const diasTrabajados = new Set(
-		jornadas.map((jornada) => {
-			const fecha = new Date(jornada.start_time);
-			fecha.setHours(0, 0, 0, 0);
-			return fecha.getTime();
-		})
+		jornadas
+			.filter((j) => j.status === 'closed')
+			.map((jornada) => {
+				const fecha = new Date(jornada.start_time);
+				fecha.setHours(0, 0, 0, 0);
+				return fecha.getTime();
+			})
 	).size;
+
 	const totalHoras = totalMinutos / 60;
 
 	return {
