@@ -3,14 +3,16 @@
 	import type { Chart, Plugin, TooltipItem } from 'chart.js';
 	import type { Periodo } from '$lib/stores/app-state';
 	import type { DatosGrafica } from '$lib/utils/dashboard';
-	import { formatearHora } from '$lib/utils/dashboard';
+	import { formatearHora, etiquetaEjeX } from '$lib/utils/dashboard';
 
 	let { datos, periodo }: { datos: DatosGrafica; periodo: Periodo } = $props();
 
 	let canvas: HTMLCanvasElement;
-	let chart: Chart | null = null;
+	let chart = $state<Chart | null>(null);
 	let chartDatos: DatosGrafica = { labels: [], datasets: [] };
 	let isDestroyed = false;
+
+	let etiquetaX = $derived(etiquetaEjeX(periodo));
 
 	function calcularTotalApilado(datasets: Chart['data']['datasets'], index: number) {
 		let total = 0;
@@ -26,22 +28,19 @@
 		afterDatasetsDraw(chartInstance) {
 			const { ctx } = chartInstance;
 			const numLabels = chartInstance.data.labels?.length ?? 0;
-			const lastIdx = chartInstance.data.datasets.length - 1;
-			const meta = chartInstance.getDatasetMeta(lastIdx);
-
+			const meta = chartInstance.getDatasetMeta(chartInstance.data.datasets.length - 1);
 			for (let i = 0; i < numLabels; i++) {
 				const total = calcularTotalApilado(chartInstance.data.datasets, i);
 				if (total <= 0) continue;
 				const bar = meta.data[i];
 				if (!bar) continue;
 				const valor = Math.round(total * 10) / 10;
-				const texto = `${valor}h`;
 				ctx.save();
 				ctx.fillStyle = '#f8fafc';
 				ctx.font = '12px system-ui, sans-serif';
 				ctx.textAlign = 'center';
 				ctx.textBaseline = 'bottom';
-				ctx.fillText(texto, bar.x, bar.y - 4);
+				ctx.fillText(`${valor}h`, bar.x, bar.y - 4);
 				ctx.restore();
 			}
 		}
@@ -55,11 +54,7 @@
 				if (periodo === 'año') return chartDatos.labels[idx] ?? '';
 				const jornada = chartDatos.datasets[0]?.jornadasPorLabel[idx];
 				if (!jornada || Array.isArray(jornada)) return chartDatos.labels[idx] ?? '';
-				return new Intl.DateTimeFormat('es-ES', {
-					weekday: 'long',
-					day: '2-digit',
-					month: 'long'
-				}).format(new Date(jornada.start_time));
+				return new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: '2-digit', month: 'long' }).format(new Date(jornada.start_time));
 			},
 			afterTitle: (items: TooltipItem<'bar'>[]) => {
 				if (!items.length) return '';
@@ -125,22 +120,16 @@
 	onMount(async () => {
 		const mod = await import('chart.js');
 		if (isDestroyed) return;
-		mod.Chart.register(
-			mod.BarController,
-			mod.BarElement,
-			mod.CategoryScale,
-			mod.LinearScale,
-			mod.Tooltip,
-			mod.Legend
-		);
+		mod.Chart.register(mod.BarController, mod.BarElement, mod.CategoryScale, mod.LinearScale, mod.Tooltip, mod.Legend);
 		crearChart(mod.Chart);
 	});
 
 	$effect(() => {
+		const { labels, datasets } = datos;
 		if (!chart) return;
 		chartDatos = datos;
-		chart.data.labels = datos.labels;
-		chart.data.datasets = datos.datasets.map((ds) => ({
+		chart.data.labels = labels;
+		chart.data.datasets = datasets.map((ds) => ({
 			label: ds.label,
 			data: ds.data,
 			backgroundColor: ds.backgroundColor,
@@ -156,6 +145,11 @@
 	});
 </script>
 
-<div class="h-64 w-full">
-	<canvas bind:this={canvas}></canvas>
+<div class="flex flex-col">
+	<div class="h-64 w-full">
+		<canvas bind:this={canvas}></canvas>
+	</div>
+	{#if etiquetaX}
+		<p class="mt-2 text-center text-sm text-text-muted">{etiquetaX}</p>
+	{/if}
 </div>

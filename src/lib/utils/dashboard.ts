@@ -4,7 +4,8 @@ export {
 	formatearFechaLarga,
 	formatearHora,
 	formatearDuracion,
-	formatearHorasDecimal
+	formatearHorasDecimal,
+	etiquetaEjeX
 } from '$lib/utils/dashboard-format';
 export {
 	calcularResumenDia,
