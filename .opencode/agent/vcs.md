@@ -8,6 +8,18 @@ permission:
   write: deny
   bash:
     '*': ask
+    'echo*': allow
+    'test*': allow
+    'ls*': allow
+    'cat*': allow
+    'grep*': allow
+    'pwd*': allow
+    'date*': allow
+    'head*': allow
+    'tail*': allow
+    'wc*': allow
+    'true*': allow
+    'false*': allow
     'git status*': allow
     'git diff*': allow
     'git log*': allow
