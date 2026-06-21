@@ -29,9 +29,12 @@ function claveDia(fecha: Date): string {
 	return `${year}-${month}-${day}`;
 }
 
-function etiquetaDia(fecha: Date): string {
-	const month = String(fecha.getMonth() + 1).padStart(2, '0');
+function etiquetaDia(fecha: Date, periodo: Periodo): string {
 	const day = String(fecha.getDate()).padStart(2, '0');
+	if (periodo === 'mes') {
+		return day;
+	}
+	const month = String(fecha.getMonth() + 1).padStart(2, '0');
 	return `${day}/${month}`;
 }
 
@@ -48,7 +51,7 @@ function datosStacked(jornadas: Jornada[], periodo: Periodo): DatosGrafica {
 	while (fechaActual.getTime() <= fin.getTime()) {
 		const key = claveDia(fechaActual);
 		diasUnicos.push(key);
-		etiquetasDia.set(key, etiquetaDia(fechaActual));
+		etiquetasDia.set(key, etiquetaDia(fechaActual, periodo));
 		jornadasPorDia.set(key, []);
 		fechaActual.setDate(fechaActual.getDate() + 1);
 	}
@@ -93,12 +96,7 @@ function datosStacked(jornadas: Jornada[], periodo: Periodo): DatosGrafica {
 }
 
 function datosPorMes(jornadas: Jornada[]): DatosGrafica {
-	const porMes = new Map<number, Jornada[]>();
-
-	for (let i = 0; i < 12; i++) {
-		porMes.set(i, []);
-	}
-
+	const porMes = new Map<number, Jornada[]>(Array.from({ length: 12 }, (_, i) => [i, []]));
 	for (const jornada of jornadas) {
 		const mes = new Date(jornada.start_time).getMonth();
 		porMes.get(mes)!.push(jornada);
