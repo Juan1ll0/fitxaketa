@@ -2,13 +2,12 @@
  * Tests para /estadisticas (+page.svelte)
  *
  * Mock del store global app-state:
- *   subscribe, getJornadas, appState, setPeriodo, cargarJornadas
+ *   subscribe, getJornadas, cargarJornadas
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, cleanup, fireEvent, screen, waitFor } from '@testing-library/svelte';
 import '@testing-library/jest-dom/vitest';
 import type { Jornada } from '$lib/db';
-import type { Periodo } from '$lib/stores/app-state';
 import EstadisticasPage from '../../routes/estadisticas/+page.svelte';
 
 // ─── Mocks del store app-state ───────────────────────────────────────────────
@@ -16,27 +15,19 @@ import EstadisticasPage from '../../routes/estadisticas/+page.svelte';
 const mocks = vi.hoisted(() => {
 	const mockSubscribe = vi.fn();
 	const mockGetJornadas = vi.fn<() => Jornada[]>().mockReturnValue([] as Jornada[]);
-	const mockSetPeriodo = vi.fn<(p: Periodo) => void>();
 	const mockCargarJornadas = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
-	const mockAppState = {
-		periodoSeleccionado: 'mes' as Periodo
-	};
 
 	return {
 		mockSubscribe,
 		mockGetJornadas,
-		mockSetPeriodo,
-		mockCargarJornadas,
-		mockAppState
+		mockCargarJornadas
 	};
 });
 
 vi.mock('$lib/stores/app-state', () => ({
 	subscribe: mocks.mockSubscribe,
 	getJornadas: mocks.mockGetJornadas,
-	setPeriodo: mocks.mockSetPeriodo,
-	cargarJornadas: mocks.mockCargarJornadas,
-	appState: mocks.mockAppState
+	cargarJornadas: mocks.mockCargarJornadas
 }));
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -69,7 +60,6 @@ describe('estadisticas/+page.svelte', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		mocks.mockGetJornadas.mockReturnValue([]);
-		mocks.mockAppState.periodoSeleccionado = 'mes';
 		mocks.mockCargarJornadas.mockResolvedValue(undefined);
 		mocks.mockSubscribe.mockReturnValue(vi.fn());
 	});
@@ -98,8 +88,6 @@ describe('estadisticas/+page.svelte', () => {
 	describe('"Mes" está seleccionado por defecto', () => {
 		it('el botón Mes tiene el estilo de activo (bg-primary)', async () => {
 			subscribeConCallbackInmediato();
-			mocks.mockAppState.periodoSeleccionado = 'mes';
-
 			render(EstadisticasPage);
 
 			await waitFor(() => {
@@ -110,8 +98,6 @@ describe('estadisticas/+page.svelte', () => {
 
 		it('los otros botones no tienen bg-primary', async () => {
 			subscribeConCallbackInmediato();
-			mocks.mockAppState.periodoSeleccionado = 'mes';
-
 			render(EstadisticasPage);
 
 			await waitFor(() => {
@@ -125,11 +111,9 @@ describe('estadisticas/+page.svelte', () => {
 
 	// ─── Cambio de periodo ─────────────────────────────────────────────────
 
-	describe('cambiar periodo actualiza el resumen', () => {
-		it('llama a setPeriodo al hacer clic en "Semana"', async () => {
+	describe('cambiar periodo actualiza el estilo activo', () => {
+		it('al hacer clic en "Semana" se activa con bg-primary', async () => {
 			subscribeConCallbackInmediato();
-			mocks.mockAppState.periodoSeleccionado = 'mes';
-
 			render(EstadisticasPage);
 
 			await waitFor(() => {
@@ -139,13 +123,13 @@ describe('estadisticas/+page.svelte', () => {
 			const semanaBtn = screen.getByText('Semana');
 			await fireEvent.click(semanaBtn);
 
-			expect(mocks.mockSetPeriodo).toHaveBeenCalledWith('semana');
+			await waitFor(() => {
+				expect(semanaBtn).toHaveClass('bg-primary');
+			});
 		});
 
-		it('llama a setPeriodo al hacer clic en "Año"', async () => {
+		it('al hacer clic en "Año" se activa con bg-primary', async () => {
 			subscribeConCallbackInmediato();
-			mocks.mockAppState.periodoSeleccionado = 'mes';
-
 			render(EstadisticasPage);
 
 			await waitFor(() => {
@@ -155,7 +139,9 @@ describe('estadisticas/+page.svelte', () => {
 			const anoBtn = screen.getByText('Año');
 			await fireEvent.click(anoBtn);
 
-			expect(mocks.mockSetPeriodo).toHaveBeenCalledWith('año');
+			await waitFor(() => {
+				expect(anoBtn).toHaveClass('bg-primary');
+			});
 		});
 	});
 
@@ -175,14 +161,12 @@ describe('estadisticas/+page.svelte', () => {
 
 		it('muestra la gráfica (canvas) cuando hay jornadas filtradas', async () => {
 			subscribeConCallbackInmediato();
-			// Jornada de hace 5 días (dentro del periodo "mes")
 			const hace5dias = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000);
 			mocks.mockGetJornadas.mockReturnValue([jornadaCerrada(1, hace5dias, 480)]);
 
 			render(EstadisticasPage);
 
 			await waitFor(() => {
-				// Canvas de la gráfica
 				expect(document.querySelector('canvas')).toBeInTheDocument();
 			});
 		});
@@ -206,14 +190,11 @@ describe('estadisticas/+page.svelte', () => {
 		it('muestra el resumen con 4 tarjetas cuando hay datos', async () => {
 			subscribeConCallbackInmediato();
 			const hace5dias = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000);
-			mocks.mockGetJornadas.mockReturnValue([
-				jornadaCerrada(1, hace5dias, 480) // 8h
-			]);
+			mocks.mockGetJornadas.mockReturnValue([jornadaCerrada(1, hace5dias, 480)]);
 
 			render(EstadisticasPage);
 
 			await waitFor(() => {
-				// Total horas, Media diaria, Días trabajados, Jorndas
 				expect(screen.getByText('Total horas')).toBeInTheDocument();
 				expect(screen.getByText('Media diaria')).toBeInTheDocument();
 				expect(screen.getByText('Días trabajados')).toBeInTheDocument();
