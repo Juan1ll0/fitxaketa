@@ -6,7 +6,15 @@
 	"formatsExts": {
 		"markup": ["svelte", "html"]
 	},
-	"ignore": ["**/node_modules/**", "**/.svelte-kit/**", "**/build/**", "**/dist/**"],
+	"ignore": [
+		"**/node_modules/**",
+		"**/.svelte-kit/**",
+		"**/build/**",
+		"**/dist/**",
+		"**/*.test.ts",
+		"**/*.test.svelte.ts",
+		"**/e2e/**"
+	],
 	"absolute": true,
 	"gitignore": true
 }

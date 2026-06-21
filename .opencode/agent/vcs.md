@@ -1,13 +1,25 @@
 ---
 description: Operaciones Git/GitHub — ramas por feature, commits convencionales, push y PRs. NUNCA modifica código de producción ni hace merge.
 mode: subagent
-model: opencode-go/glm-5.2
+model: opencode-go/kimi-k2.7-code
 color: '#24292E'
 permission:
   edit: deny
   write: deny
   bash:
     '*': ask
+    'echo*': allow
+    'test*': allow
+    'ls*': allow
+    'cat*': allow
+    'grep*': allow
+    'pwd*': allow
+    'date*': allow
+    'head*': allow
+    'tail*': allow
+    'wc*': allow
+    'true*': allow
+    'false*': allow
     'git status*': allow
     'git diff*': allow
     'git log*': allow
