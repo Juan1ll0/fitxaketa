@@ -12,8 +12,9 @@ test.describe('Persistencia del contador de fichaje', () => {
 		const stopButton = page.getByRole('button', { name: /Fichar salida/i });
 		await expect(stopButton).toBeVisible();
 
-		await page.goto('/registros');
-		await expect(page.getByRole('heading', { name: /Historial/i })).toBeVisible();
+		await page.goto('/historial');
+		await expect(page).toHaveURL('/historial');
+		await expect(page.getByText('Hoy')).toBeVisible();
 
 		await page.goto('/');
 		await expect(stopButton).toBeVisible();

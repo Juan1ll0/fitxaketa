@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { formatearFecha, calcularResumenDia } from '$lib/utils/dashboard';
+import {
+	formatearFecha,
+	calcularResumenDia,
+	agruparPorDia,
+	formatearHora,
+	formatearDuracion
+} from '$lib/utils/dashboard';
 import type { Jornada } from '$lib/db';
 
 /** Factory de jornada cerrada con coords null. duration en minutos, startHour en hora del día. */
@@ -140,6 +146,153 @@ describe('dashboard utils', () => {
 
 			expect(resultado.totalHoras).toBe(0);
 			expect(resultado.totalJornadas).toBe(2);
+		});
+	});
+
+	describe('agruparPorDia()', () => {
+		it('agrupa jornadas bajo "Hoy" para fecha actual', () => {
+			const hoy = new Date();
+			const jornadas: Jornada[] = [
+				{
+					id: 1,
+					start_time: hoy,
+					end_time: hoy,
+					duration: 60,
+					synced: 1,
+					status: 'closed',
+					lat_start: null,
+					lng_start: null,
+					lat_end: null,
+					lng_end: null
+				}
+			];
+			const grupos = agruparPorDia(jornadas);
+			expect(grupos.has('Hoy')).toBe(true);
+			expect(grupos.get('Hoy')?.length).toBe(1);
+		});
+
+		it('agrupa jornadas bajo "Ayer" para fecha de ayer', () => {
+			const ayer = new Date();
+			ayer.setDate(ayer.getDate() - 1);
+			ayer.setHours(12, 0, 0, 0);
+			const jornadas: Jornada[] = [
+				{
+					id: 1,
+					start_time: ayer,
+					end_time: ayer,
+					duration: 60,
+					synced: 1,
+					status: 'closed',
+					lat_start: null,
+					lng_start: null,
+					lat_end: null,
+					lng_end: null
+				}
+			];
+			const grupos = agruparPorDia(jornadas);
+			expect(grupos.has('Ayer')).toBe(true);
+		});
+
+		it('formatea fechas antiguas como "DD MMM YYYY"', () => {
+			const fecha = new Date('2026-06-15T12:00:00');
+			const jornadas: Jornada[] = [
+				{
+					id: 1,
+					start_time: fecha,
+					end_time: fecha,
+					duration: 60,
+					synced: 1,
+					status: 'closed',
+					lat_start: null,
+					lng_start: null,
+					lat_end: null,
+					lng_end: null
+				}
+			];
+			const grupos = agruparPorDia(jornadas);
+			expect(grupos.has('15 jun 2026')).toBe(true);
+		});
+
+		it('ordena grupos descendente (más reciente primero)', () => {
+			const hoy = new Date();
+			const ayer = new Date();
+			ayer.setDate(ayer.getDate() - 1);
+			const hace3dias = new Date();
+			hace3dias.setDate(hace3dias.getDate() - 3);
+
+			const jornadas: Jornada[] = [
+				{
+					id: 1,
+					start_time: hace3dias,
+					end_time: hace3dias,
+					duration: 60,
+					synced: 1,
+					status: 'closed',
+					lat_start: null,
+					lng_start: null,
+					lat_end: null,
+					lng_end: null
+				},
+				{
+					id: 2,
+					start_time: ayer,
+					end_time: ayer,
+					duration: 60,
+					synced: 1,
+					status: 'closed',
+					lat_start: null,
+					lng_start: null,
+					lat_end: null,
+					lng_end: null
+				},
+				{
+					id: 3,
+					start_time: hoy,
+					end_time: hoy,
+					duration: 60,
+					synced: 1,
+					status: 'closed',
+					lat_start: null,
+					lng_start: null,
+					lat_end: null,
+					lng_end: null
+				}
+			];
+			const grupos = agruparPorDia(jornadas);
+			const keys = [...grupos.keys()];
+			// El primer key debe ser "Hoy", el segundo "Ayer", el tercero la fecha antigua
+			expect(keys[0]).toBe('Hoy');
+			expect(keys[1]).toBe('Ayer');
+		});
+	});
+
+	describe('formatearHora()', () => {
+		it('formatea hora como HH:MM', () => {
+			const fecha = new Date('2026-06-21T14:30:00');
+			expect(formatearHora(fecha)).toMatch(/14:30/);
+		});
+
+		it('formatea correctamente hora de la mañana', () => {
+			const fecha = new Date('2026-06-21T09:05:00');
+			expect(formatearHora(fecha)).toMatch(/09:05/);
+		});
+	});
+
+	describe('formatearDuracion()', () => {
+		it('formatea minutos como HH:MM:SS', () => {
+			expect(formatearDuracion(125)).toBe('02:05:00');
+		});
+
+		it('formatea 0 minutos como 00:00:00', () => {
+			expect(formatearDuracion(0)).toBe('00:00:00');
+		});
+
+		it('formatea 60 minutos como 01:00:00', () => {
+			expect(formatearDuracion(60)).toBe('01:00:00');
+		});
+
+		it('retorna "En curso" para null', () => {
+			expect(formatearDuracion(null)).toBe('En curso');
 		});
 	});
 });
