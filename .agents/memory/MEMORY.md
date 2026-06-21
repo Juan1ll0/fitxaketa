@@ -192,3 +192,56 @@ El store de `app-state.ts` se beneficia de:
 - **`getJornadasHoy()`** y **`getResumenHoy()`** — getters públicos desde `app-state.svelte.ts`. El tab Fichar los llama dentro del callback de `subscribe()` para mantener reactividad.
 - **`calcularResumenDia()`** se invoca desde `cargarJornadas()` en `app-state.ts` para recalcular `resumenHoy` y `jornadasHoy` cada vez que cambian los datos (fichaje nuevo, recarga desde Dexie).
 - Esta centralización evita lógica duplicada: el cálculo del resumen del día ocurre en un solo lugar y tanto el tab Fichar como futuros tabs (Historial, Estadísticas) lo consumen vía el store.
+
+## 2026-06-21 — Sub-spec 003.4: Tab Estadísticas (gráfica Chart.js)
+
+### Utils de dashboard modularizadas
+
+Utils de dashboard refactorizadas en módulos cohesivos (`src/lib/utils/dashboard-*.ts`) con barrel `dashboard.ts`:
+- `dashboard-types.ts` — interfaces `ResumenDia`, `BarraGrafica`
+- `dashboard-format.ts` — formateadores (`formatearFecha`, `formatearFechaLarga`, `formatearHora`, `formatearDuracion`, `formatearHorasDecimal`)
+- `dashboard-calc.ts` — cálculos (`calcularResumenDia`, `agruparPorDia`, `calcularResumenPeriodo`)
+- `dashboard-periodo.ts` — `filtrarPorPeriodo` con rangos naturales
+- `dashboard-grafica.ts` — `prepararDatosGrafica`
+
+Separación para mantener ficheros ≤ 120 líneas y funciones puras.
+
+### Periodos naturales
+
+En vez de ventanas rodantes: semana = lunes→domingo, mes = día 1→último, año = 12 meses (Ene→Dic). `obtenerRangoPeriodo()` en `dashboard-periodo.ts`.
+
+### Colores alternados por jornada
+
+1ª jornada del día = `#3b82f6` (primary), 2ª+ = `#22c55e` (success/verde). `barrasPorJornada()` lleva conteo por día.
+
+### Vista anual agrupa por mes
+
+`barrasPorMes()` suma duraciones de cada mes → 12 barras máx (solo meses con datos).
+
+### Data labels sobre barras
+
+Plugin custom `fitxaketaDataLabels` (afterDatasetsDraw) dibuja "Xh" sobre cada barra — no usa librería externa.
+
+### Tooltip enriquecido
+
+- title = fecha larga (es-ES, weekday + day + month)
+- afterTitle = "HH:MM – HH:MM" (hora inicio/fin)
+- label = "Duración: Xh Ym"
+
+### Store global como fuente de datos
+
+`subscribe()`, `getJornadas()`, `getPeriodoSeleccionado()`, `setPeriodo()`, `cargarJornadas()`. La página no carga datos localmente.
+
+### `ssr = false` en `+page.ts` separado
+
+Mismo patrón que 003.2 y 003.3 (requisito ESLint `svelte/valid-prop-names-in-kit-pages`).
+
+### Chart.js lazy import
+
+En `onMount` con registro selectivo de componentes (BarController, BarElement, CategoryScale, LinearScale, Tooltip, Legend). Guard `isDestroyed` para evitar render tras destroy.
+
+### Bundle
+
+- Entry: 1.3 KB gzip (límite 150 KB)
+- Total: 126.31 KB gzip (límite 300 KB)
+- Chart.js aislado en chunk lazy (~70 KB)
