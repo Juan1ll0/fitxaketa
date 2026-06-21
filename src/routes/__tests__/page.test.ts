@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, cleanup, fireEvent, screen } from '@testing-library/svelte';
+import { render, cleanup, fireEvent, screen, waitFor } from '@testing-library/svelte';
 import '@testing-library/jest-dom/vitest';
 import type { Jornada } from '$lib/db';
-import Page from '../../routes/+page.svelte';
+import Page from '../+page.svelte';
 
 // Mocks del store app-state y utils - vi.hoisted() asegura que las variables se creen antes del hoisting de vi.mock
 const mocks = vi.hoisted(() => {
@@ -61,7 +61,7 @@ describe('+page.svelte', () => {
 	});
 
 	describe('Cronómetro se actualiza (mock de getElapsed)', () => {
-		it('debería mostrar el valor retornado por getElapsed', () => {
+		it('debería mostrar el valor retornado por getElapsed', async () => {
 			// Setup mocks ANTES de render
 			mocks.mockGetElapsed.mockReturnValue('01:30:45');
 			mocks.mockSubscribe.mockImplementation((callback: () => void) => {
@@ -71,11 +71,13 @@ describe('+page.svelte', () => {
 
 			render(Page);
 
-			const cronometro = screen.getByText('01:30:45');
-			expect(cronometro).toBeInTheDocument();
+			await waitFor(() => {
+				const cronometro = screen.getByText('01:30:45');
+				expect(cronometro).toBeInTheDocument();
+			});
 		});
 
-		it('debería actualizarse cuando getElapsed cambia tras callback', () => {
+		it('debería actualizarse cuando getElapsed cambia tras callback', async () => {
 			// Setup inicial
 			mocks.mockGetElapsed.mockReturnValue('00:00:00');
 			let callback: () => void = vi.fn();
@@ -91,13 +93,15 @@ describe('+page.svelte', () => {
 			mocks.mockGetElapsed.mockReturnValue('00:05:30');
 			callback();
 
-			const cronometro = screen.getByText('00:05:30');
-			expect(cronometro).toBeInTheDocument();
+			await waitFor(() => {
+				const cronometro = screen.getByText('00:05:30');
+				expect(cronometro).toBeInTheDocument();
+			});
 		});
 	});
 
 	describe('Botón cambia texto (Fichar entrada/salida)', () => {
-		it('debería mostrar "Fichar entrada" cuando no hay jornada activa', () => {
+		it('debería mostrar "Fichar entrada" cuando no hay jornada activa', async () => {
 			mocks.mockGetClockedIn.mockReturnValue(false);
 			mocks.mockSubscribe.mockImplementation((callback: () => void) => {
 				callback();
@@ -106,11 +110,13 @@ describe('+page.svelte', () => {
 
 			render(Page);
 
-			const boton = screen.getByRole('button');
-			expect(boton).toHaveTextContent('Fichar entrada');
+			await waitFor(() => {
+				const boton = screen.getByRole('button');
+				expect(boton).toHaveTextContent('Fichar entrada');
+			});
 		});
 
-		it('debería mostrar "Fichar salida" cuando hay jornada activa', () => {
+		it('debería mostrar "Fichar salida" cuando hay jornada activa', async () => {
 			mocks.mockGetClockedIn.mockReturnValue(true);
 			mocks.mockSubscribe.mockImplementation((callback: () => void) => {
 				callback();
@@ -119,8 +125,10 @@ describe('+page.svelte', () => {
 
 			render(Page);
 
-			const boton = screen.getByRole('button');
-			expect(boton).toHaveTextContent('Fichar salida');
+			await waitFor(() => {
+				const boton = screen.getByRole('button');
+				expect(boton).toHaveTextContent('Fichar salida');
+			});
 		});
 
 		it('debería llamar a startJornada al hacer clic cuando no está fichado', async () => {
@@ -131,6 +139,11 @@ describe('+page.svelte', () => {
 			});
 
 			render(Page);
+
+			await waitFor(() => {
+				const boton = screen.getByRole('button');
+				expect(boton).toBeInTheDocument();
+			});
 
 			const boton = screen.getByRole('button');
 			await fireEvent.click(boton);
@@ -147,6 +160,11 @@ describe('+page.svelte', () => {
 
 			render(Page);
 
+			await waitFor(() => {
+				const boton = screen.getByRole('button');
+				expect(boton).toBeInTheDocument();
+			});
+
 			const boton = screen.getByRole('button');
 			await fireEvent.click(boton);
 
@@ -155,7 +173,7 @@ describe('+page.svelte', () => {
 	});
 
 	describe('Botón cambia color (primary/danger)', () => {
-		it('debería tener clase bg-primary cuando no está fichado (clockedIn=false)', () => {
+		it('debería tener clase bg-primary cuando no está fichado (clockedIn=false)', async () => {
 			mocks.mockGetClockedIn.mockReturnValue(false);
 			mocks.mockSubscribe.mockImplementation((callback: () => void) => {
 				callback();
@@ -164,12 +182,14 @@ describe('+page.svelte', () => {
 
 			render(Page);
 
-			const boton = screen.getByRole('button');
-			expect(boton).toHaveClass('bg-primary');
-			expect(boton).not.toHaveClass('bg-danger');
+			await waitFor(() => {
+				const boton = screen.getByRole('button');
+				expect(boton).toHaveClass('bg-primary');
+				expect(boton).not.toHaveClass('bg-danger');
+			});
 		});
 
-		it('debería tener clase bg-danger cuando está fichado (clockedIn=true)', () => {
+		it('debería tener clase bg-danger cuando está fichado (clockedIn=true)', async () => {
 			mocks.mockGetClockedIn.mockReturnValue(true);
 			mocks.mockSubscribe.mockImplementation((callback: () => void) => {
 				callback();
@@ -178,14 +198,16 @@ describe('+page.svelte', () => {
 
 			render(Page);
 
-			const boton = screen.getByRole('button');
-			expect(boton).toHaveClass('bg-danger');
-			expect(boton).not.toHaveClass('bg-primary');
+			await waitFor(() => {
+				const boton = screen.getByRole('button');
+				expect(boton).toHaveClass('bg-danger');
+				expect(boton).not.toHaveClass('bg-primary');
+			});
 		});
 	});
 
 	describe('Resumen se muestra correctamente', () => {
-		it('debería mostrar el resumen del día con horas y número de jornadas', () => {
+		it('debería mostrar el resumen del día con horas y número de jornadas', async () => {
 			mocks.mockGetResumenHoy.mockReturnValue({ totalHoras: 8, totalJornadas: 2 });
 			mocks.mockGetJornadasHoy.mockReturnValue([{ id: 1 }, { id: 2 }] as unknown as Jornada[]);
 			mocks.mockSubscribe.mockImplementation((callback: () => void) => {
@@ -196,12 +218,14 @@ describe('+page.svelte', () => {
 			render(Page);
 
 			// 8h 0m | 2 jornadas
-			const resumen = screen.getByText(/8h 0m/);
-			expect(resumen).toBeInTheDocument();
-			expect(screen.getByText(/2 jornadas/)).toBeInTheDocument();
+			await waitFor(() => {
+				const resumen = screen.getByText(/8h 0m/);
+				expect(resumen).toBeInTheDocument();
+				expect(screen.getByText(/2 jornadas/)).toBeInTheDocument();
+			});
 		});
 
-		it('debería mostrar "jornada" en singular cuando solo hay una', () => {
+		it('debería mostrar "jornada" en singular cuando solo hay una', async () => {
 			mocks.mockGetResumenHoy.mockReturnValue({ totalHoras: 4, totalJornadas: 1 });
 			mocks.mockGetJornadasHoy.mockReturnValue([{ id: 1 }] as unknown as Jornada[]);
 			mocks.mockSubscribe.mockImplementation((callback: () => void) => {
@@ -211,10 +235,12 @@ describe('+page.svelte', () => {
 
 			render(Page);
 
-			expect(screen.getByText(/1 jornada$/)).toBeInTheDocument();
+			await waitFor(() => {
+				expect(screen.getByText(/1 jornada$/)).toBeInTheDocument();
+			});
 		});
 
-		it('debería mostrar 0h 0m cuando no hay jornadas', () => {
+		it('debería mostrar 0h 0m cuando no hay jornadas', async () => {
 			mocks.mockGetResumenHoy.mockReturnValue({ totalHoras: 0, totalJornadas: 0 });
 			mocks.mockGetJornadasHoy.mockReturnValue([]);
 			mocks.mockSubscribe.mockImplementation((callback: () => void) => {
@@ -224,13 +250,15 @@ describe('+page.svelte', () => {
 
 			render(Page);
 
-			expect(screen.getByText(/0h 0m/)).toBeInTheDocument();
-			expect(screen.getByText(/0 jornadas/)).toBeInTheDocument();
+			await waitFor(() => {
+				expect(screen.getByText(/0h 0m/)).toBeInTheDocument();
+				expect(screen.getByText(/0 jornadas/)).toBeInTheDocument();
+			});
 		});
 	});
 
 	describe('Fecha se muestra en formato largo', () => {
-		it('debería mostrar la fecha formateada en la parte superior', () => {
+		it('debería mostrar la fecha formateada en la parte superior', async () => {
 			mocks.mockSubscribe.mockImplementation((callback: () => void) => {
 				callback();
 				return vi.fn();
@@ -239,13 +267,15 @@ describe('+page.svelte', () => {
 			render(Page);
 
 			// La fecha viene del mock de formatearFecha
-			const fecha = screen.getByText('domingo, 21 de junio de 2026');
-			expect(fecha).toBeInTheDocument();
+			await waitFor(() => {
+				const fecha = screen.getByText('domingo, 21 de junio de 2026');
+				expect(fecha).toBeInTheDocument();
+			});
 		});
 	});
 
 	describe('Persistencia tras recarga (mock de initAppState)', () => {
-		it('debería llamar a initAppState en onMount', () => {
+		it('debería llamar a initAppState en onMount', async () => {
 			mocks.mockSubscribe.mockImplementation((callback: () => void) => {
 				callback();
 				return vi.fn();
@@ -253,7 +283,9 @@ describe('+page.svelte', () => {
 
 			render(Page);
 
-			expect(mocks.mockInitAppState).toHaveBeenCalled();
+			await waitFor(() => {
+				expect(mocks.mockInitAppState).toHaveBeenCalled();
+			});
 		});
 
 		it('debería mantener el estado tras re-llamar a initAppState', async () => {
@@ -265,7 +297,9 @@ describe('+page.svelte', () => {
 			render(Page);
 
 			// Primera inicialización
-			expect(mocks.mockInitAppState).toHaveBeenCalledTimes(1);
+			await waitFor(() => {
+				expect(mocks.mockInitAppState).toHaveBeenCalledTimes(1);
+			});
 
 			// Simular recarga (llamar initAppState de nuevo)
 			mocks.mockInitAppState.mockClear();
@@ -276,7 +310,7 @@ describe('+page.svelte', () => {
 	});
 
 	describe('Suscripción reactiva al store', () => {
-		it('debería suscribirse al store usando subscribe()', () => {
+		it('debería suscribirse al store usando subscribe()', async () => {
 			mocks.mockSubscribe.mockImplementation((callback: () => void) => {
 				callback();
 				return vi.fn();
@@ -284,10 +318,12 @@ describe('+page.svelte', () => {
 
 			render(Page);
 
-			expect(mocks.mockSubscribe).toHaveBeenCalled();
+			await waitFor(() => {
+				expect(mocks.mockSubscribe).toHaveBeenCalled();
+			});
 		});
 
-		it('debería actualizar UI cuando el store cambia vía callback', () => {
+		it('debería actualizar UI cuando el store cambia vía callback', async () => {
 			mocks.mockGetClockedIn.mockReturnValue(false);
 			let callback: () => void = vi.fn();
 			mocks.mockSubscribe.mockImplementation((cb: () => void) => {
@@ -302,11 +338,13 @@ describe('+page.svelte', () => {
 			mocks.mockGetClockedIn.mockReturnValue(true);
 			callback();
 
-			const boton = screen.getByRole('button');
-			expect(boton).toHaveTextContent('Fichar salida');
+			await waitFor(() => {
+				const boton = screen.getByRole('button');
+				expect(boton).toHaveTextContent('Fichar salida');
+			});
 		});
 
-		it('debería retornar función de cleanup desde subscribe', () => {
+		it('debería retornar función de cleanup desde subscribe', async () => {
 			const mockUnsubscribe = vi.fn();
 			mocks.mockSubscribe.mockReturnValue(mockUnsubscribe);
 			mocks.mockSubscribe.mockImplementation(() => {
@@ -315,13 +353,15 @@ describe('+page.svelte', () => {
 
 			render(Page);
 
-			// Verificamos que unsubscribe fue retornado por subscribe
-			expect(mockUnsubscribe).toBeDefined();
+			await waitFor(() => {
+				// Verificamos que unsubscribe fue retornado por subscribe
+				expect(mockUnsubscribe).toBeDefined();
+			});
 		});
 	});
 
 	describe('Cleanup de recursos (onDestroy)', () => {
-		it('debería retornar función de unsubscribe para cleanup', () => {
+		it('debería retornar función de unsubscribe para cleanup', async () => {
 			const mockUnsubscribe = vi.fn();
 			mocks.mockSubscribe.mockReturnValue(mockUnsubscribe);
 			mocks.mockSubscribe.mockImplementation(() => {
@@ -330,14 +370,16 @@ describe('+page.svelte', () => {
 
 			render(Page);
 
-			// El onDestroy del componente llama a la función de cleanup retornada
-			// Verificamos que subscribe retorna una función de cleanup
-			expect(typeof mockUnsubscribe).toBe('function');
+			await waitFor(() => {
+				// El onDestroy del componente llama a la función de cleanup retornada
+				// Verificamos que subscribe retorna una función de cleanup
+				expect(typeof mockUnsubscribe).toBe('function');
+			});
 		});
 	});
 
 	describe('Estado "Trabajando" / "Descansando"', () => {
-		it('debería mostrar "Trabajando" cuando clockedIn es true', () => {
+		it('debería mostrar "Trabajando" cuando clockedIn es true', async () => {
 			mocks.mockGetClockedIn.mockReturnValue(true);
 			mocks.mockSubscribe.mockImplementation((callback: () => void) => {
 				callback();
@@ -346,10 +388,12 @@ describe('+page.svelte', () => {
 
 			render(Page);
 
-			expect(screen.getByText('Trabajando')).toBeInTheDocument();
+			await waitFor(() => {
+				expect(screen.getByText('Trabajando')).toBeInTheDocument();
+			});
 		});
 
-		it('debería mostrar "Descansando" cuando clockedIn es false', () => {
+		it('debería mostrar "Descansando" cuando clockedIn es false', async () => {
 			mocks.mockGetClockedIn.mockReturnValue(false);
 			mocks.mockSubscribe.mockImplementation((callback: () => void) => {
 				callback();
@@ -358,7 +402,9 @@ describe('+page.svelte', () => {
 
 			render(Page);
 
-			expect(screen.getByText('Descansando')).toBeInTheDocument();
+			await waitFor(() => {
+				expect(screen.getByText('Descansando')).toBeInTheDocument();
+			});
 		});
 	});
 });
