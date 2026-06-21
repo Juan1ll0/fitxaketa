@@ -1,5 +1,5 @@
 import { createJornada, closeJornada, getOpenJornada, getAllJornadas, type Jornada } from '$lib/db';
-import { appState, notify, type Periodo, type ResumenDia } from './app-state.svelte';
+import { appState, notificarCambio, type Periodo, type ResumenDia } from './app-state.svelte';
 
 let intervalId: ReturnType<typeof setInterval> | null = null;
 
@@ -10,7 +10,7 @@ function tick() {
 	const m = String(Math.floor((diff % 3600000) / 60000)).padStart(2, '0');
 	const s = String(Math.floor((diff % 60000) / 1000)).padStart(2, '0');
 	appState.elapsed = `${h}:${m}:${s}`;
-	notify();
+	notificarCambio();
 }
 
 function startTimer() {
@@ -46,12 +46,12 @@ export async function cargarJornadas(): Promise<void> {
 	appState.jornadasHoy = hoy;
 	appState.resumenHoy = resumen;
 	appState.cargando = false;
-	notify();
+	notificarCambio();
 }
 
 export function setPeriodo(periodo: Periodo): void {
 	appState.periodoSeleccionado = periodo;
-	notify();
+	notificarCambio();
 }
 
 export async function initAppState(): Promise<void> {

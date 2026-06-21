@@ -1,6 +1,13 @@
 {
 	"$schema": "https://unpkg.com/knip@latest/schema.json",
-	"entry": ["src/service-worker.ts", "src/routes/**/+*.{ts,svelte}", "src/app.html"],
+	"entry": [
+		"src/service-worker.ts",
+		"src/routes/**/+*.{ts,svelte}",
+		"src/app.html",
+		"src/lib/stores/app-state.ts",
+		"src/lib/stores/app-state.svelte.ts"
+	],
 	"project": ["src/**/*.{ts,svelte}"],
-	"ignoreDependencies": ["tailwindcss", "@secretlint/secretlint-rule-preset-recommend"]
+	"ignoreDependencies": ["tailwindcss", "@secretlint/secretlint-rule-preset-recommend"],
+	"ignoreUnresolved": ["^\\$app/.+"]
 }

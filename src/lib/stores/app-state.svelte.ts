@@ -23,11 +23,9 @@ export const appState = $state({
 	cargando: false
 });
 
-export function notify(): void {
+export function notificarCambio(): void {
 	listeners.forEach((fn) => fn());
 }
-
-export const notificarCambio = notify;
 
 export function subscribe(fn: Listener): () => void {
 	listeners.push(fn);
