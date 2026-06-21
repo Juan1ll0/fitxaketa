@@ -44,6 +44,29 @@ vi.mock('$lib/utils/dashboard', () => ({
 	formatearFecha: mocks.mockFormatearFecha
 }));
 
+/**
+ * Configura mockSubscribe para invocar el callback inmediatamente y retornar un vi.fn().
+ * Usado por la mayoría de tests que solo necesitan que el store notifique al render.
+ */
+function subscribeConCallbackInmediato(): void {
+	mocks.mockSubscribe.mockImplementation((callback: () => void) => {
+		callback();
+		return vi.fn();
+	});
+}
+
+/**
+ * Renderiza la página y espera a que el botón de fichar esté disponible en el DOM.
+ * Retorna el botón para interacciones posteriores (click, aserciones de clase).
+ */
+async function renderYObtenerBoton(): Promise<HTMLElement> {
+	render(Page);
+	await waitFor(() => {
+		expect(screen.getByRole('button')).toBeInTheDocument();
+	});
+	return screen.getByRole('button');
+}
+
 describe('+page.svelte', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
@@ -64,10 +87,7 @@ describe('+page.svelte', () => {
 		it('debería mostrar el valor retornado por getElapsed', async () => {
 			// Setup mocks ANTES de render
 			mocks.mockGetElapsed.mockReturnValue('01:30:45');
-			mocks.mockSubscribe.mockImplementation((callback: () => void) => {
-				callback();
-				return vi.fn();
-			});
+			subscribeConCallbackInmediato();
 
 			render(Page);
 
@@ -103,10 +123,7 @@ describe('+page.svelte', () => {
 	describe('Botón cambia texto (Fichar entrada/salida)', () => {
 		it('debería mostrar "Fichar entrada" cuando no hay jornada activa', async () => {
 			mocks.mockGetClockedIn.mockReturnValue(false);
-			mocks.mockSubscribe.mockImplementation((callback: () => void) => {
-				callback();
-				return vi.fn();
-			});
+			subscribeConCallbackInmediato();
 
 			render(Page);
 
@@ -118,10 +135,7 @@ describe('+page.svelte', () => {
 
 		it('debería mostrar "Fichar salida" cuando hay jornada activa', async () => {
 			mocks.mockGetClockedIn.mockReturnValue(true);
-			mocks.mockSubscribe.mockImplementation((callback: () => void) => {
-				callback();
-				return vi.fn();
-			});
+			subscribeConCallbackInmediato();
 
 			render(Page);
 
@@ -133,19 +147,9 @@ describe('+page.svelte', () => {
 
 		it('debería llamar a startJornada al hacer clic cuando no está fichado', async () => {
 			mocks.mockGetClockedIn.mockReturnValue(false);
-			mocks.mockSubscribe.mockImplementation((callback: () => void) => {
-				callback();
-				return vi.fn();
-			});
+			subscribeConCallbackInmediato();
 
-			render(Page);
-
-			await waitFor(() => {
-				const boton = screen.getByRole('button');
-				expect(boton).toBeInTheDocument();
-			});
-
-			const boton = screen.getByRole('button');
+			const boton = await renderYObtenerBoton();
 			await fireEvent.click(boton);
 
 			expect(mocks.mockStartJornada).toHaveBeenCalled();
@@ -153,19 +157,9 @@ describe('+page.svelte', () => {
 
 		it('debería llamar a stopJornada al hacer clic cuando está fichado', async () => {
 			mocks.mockGetClockedIn.mockReturnValue(true);
-			mocks.mockSubscribe.mockImplementation((callback: () => void) => {
-				callback();
-				return vi.fn();
-			});
+			subscribeConCallbackInmediato();
 
-			render(Page);
-
-			await waitFor(() => {
-				const boton = screen.getByRole('button');
-				expect(boton).toBeInTheDocument();
-			});
-
-			const boton = screen.getByRole('button');
+			const boton = await renderYObtenerBoton();
 			await fireEvent.click(boton);
 
 			expect(mocks.mockStopJornada).toHaveBeenCalled();
@@ -175,10 +169,7 @@ describe('+page.svelte', () => {
 	describe('Botón cambia color (primary/danger)', () => {
 		it('debería tener clase bg-primary cuando no está fichado (clockedIn=false)', async () => {
 			mocks.mockGetClockedIn.mockReturnValue(false);
-			mocks.mockSubscribe.mockImplementation((callback: () => void) => {
-				callback();
-				return vi.fn();
-			});
+			subscribeConCallbackInmediato();
 
 			render(Page);
 
@@ -191,10 +182,7 @@ describe('+page.svelte', () => {
 
 		it('debería tener clase bg-danger cuando está fichado (clockedIn=true)', async () => {
 			mocks.mockGetClockedIn.mockReturnValue(true);
-			mocks.mockSubscribe.mockImplementation((callback: () => void) => {
-				callback();
-				return vi.fn();
-			});
+			subscribeConCallbackInmediato();
 
 			render(Page);
 
@@ -210,10 +198,7 @@ describe('+page.svelte', () => {
 		it('debería mostrar el resumen del día con horas y número de jornadas', async () => {
 			mocks.mockGetResumenHoy.mockReturnValue({ totalHoras: 8, totalJornadas: 2 });
 			mocks.mockGetJornadasHoy.mockReturnValue([{ id: 1 }, { id: 2 }] as unknown as Jornada[]);
-			mocks.mockSubscribe.mockImplementation((callback: () => void) => {
-				callback();
-				return vi.fn();
-			});
+			subscribeConCallbackInmediato();
 
 			render(Page);
 
@@ -228,10 +213,7 @@ describe('+page.svelte', () => {
 		it('debería mostrar "jornada" en singular cuando solo hay una', async () => {
 			mocks.mockGetResumenHoy.mockReturnValue({ totalHoras: 4, totalJornadas: 1 });
 			mocks.mockGetJornadasHoy.mockReturnValue([{ id: 1 }] as unknown as Jornada[]);
-			mocks.mockSubscribe.mockImplementation((callback: () => void) => {
-				callback();
-				return vi.fn();
-			});
+			subscribeConCallbackInmediato();
 
 			render(Page);
 
@@ -243,10 +225,7 @@ describe('+page.svelte', () => {
 		it('debería mostrar 0h 0m cuando no hay jornadas', async () => {
 			mocks.mockGetResumenHoy.mockReturnValue({ totalHoras: 0, totalJornadas: 0 });
 			mocks.mockGetJornadasHoy.mockReturnValue([]);
-			mocks.mockSubscribe.mockImplementation((callback: () => void) => {
-				callback();
-				return vi.fn();
-			});
+			subscribeConCallbackInmediato();
 
 			render(Page);
 
@@ -259,10 +238,7 @@ describe('+page.svelte', () => {
 
 	describe('Fecha se muestra en formato largo', () => {
 		it('debería mostrar la fecha formateada en la parte superior', async () => {
-			mocks.mockSubscribe.mockImplementation((callback: () => void) => {
-				callback();
-				return vi.fn();
-			});
+			subscribeConCallbackInmediato();
 
 			render(Page);
 
@@ -276,10 +252,7 @@ describe('+page.svelte', () => {
 
 	describe('Persistencia tras recarga (mock de initAppState)', () => {
 		it('debería llamar a initAppState en onMount', async () => {
-			mocks.mockSubscribe.mockImplementation((callback: () => void) => {
-				callback();
-				return vi.fn();
-			});
+			subscribeConCallbackInmediato();
 
 			render(Page);
 
@@ -289,10 +262,7 @@ describe('+page.svelte', () => {
 		});
 
 		it('debería mantener el estado tras re-llamar a initAppState', async () => {
-			mocks.mockSubscribe.mockImplementation((callback: () => void) => {
-				callback();
-				return vi.fn();
-			});
+			subscribeConCallbackInmediato();
 
 			render(Page);
 
@@ -311,10 +281,7 @@ describe('+page.svelte', () => {
 
 	describe('Suscripción reactiva al store', () => {
 		it('debería suscribirse al store usando subscribe()', async () => {
-			mocks.mockSubscribe.mockImplementation((callback: () => void) => {
-				callback();
-				return vi.fn();
-			});
+			subscribeConCallbackInmediato();
 
 			render(Page);
 
@@ -381,10 +348,7 @@ describe('+page.svelte', () => {
 	describe('Estado "Trabajando" / "Descansando"', () => {
 		it('debería mostrar "Trabajando" cuando clockedIn es true', async () => {
 			mocks.mockGetClockedIn.mockReturnValue(true);
-			mocks.mockSubscribe.mockImplementation((callback: () => void) => {
-				callback();
-				return vi.fn();
-			});
+			subscribeConCallbackInmediato();
 
 			render(Page);
 
@@ -395,10 +359,7 @@ describe('+page.svelte', () => {
 
 		it('debería mostrar "Descansando" cuando clockedIn es false', async () => {
 			mocks.mockGetClockedIn.mockReturnValue(false);
-			mocks.mockSubscribe.mockImplementation((callback: () => void) => {
-				callback();
-				return vi.fn();
-			});
+			subscribeConCallbackInmediato();
 
 			render(Page);
 

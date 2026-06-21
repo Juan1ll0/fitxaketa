@@ -2,6 +2,38 @@ import { describe, it, expect } from 'vitest';
 import { formatearFecha, calcularResumenDia } from '$lib/utils/dashboard';
 import type { Jornada } from '$lib/db';
 
+/** Factory de jornada cerrada con coords null. duration en minutos, startHour en hora del día. */
+function jornadaCerrada(id: number, startHour: number, duration: number): Jornada {
+	return {
+		id,
+		start_time: new Date(2026, 5, 21, startHour, 0),
+		end_time: new Date(2026, 5, 21, startHour + duration / 60, 0),
+		lat_start: null,
+		lng_start: null,
+		lat_end: null,
+		lng_end: null,
+		duration,
+		status: 'closed',
+		synced: 1
+	};
+}
+
+/** Factory de jornada abierta (duration null, end_time null). */
+function jornadaAbierta(id: number, startHour: number): Jornada {
+	return {
+		id,
+		start_time: new Date(2026, 5, 21, startHour, 0),
+		end_time: null,
+		lat_start: null,
+		lng_start: null,
+		lat_end: null,
+		lng_end: null,
+		duration: null,
+		status: 'open',
+		synced: 0
+	};
+}
+
 describe('dashboard utils', () => {
 	describe('formatearFecha()', () => {
 		// AC: Formato largo español correcto (e.g., "domingo, 21 de junio de 2026")
@@ -81,32 +113,7 @@ describe('dashboard utils', () => {
 
 		// AC: Múltiples jornadas
 		it('debería calcular correctamente con múltiples jornadas', () => {
-			const jornadas: Jornada[] = [
-				{
-					id: 1,
-					start_time: new Date(2026, 5, 21, 9, 0),
-					end_time: new Date(2026, 5, 21, 13, 0),
-					lat_start: null,
-					lng_start: null,
-					lat_end: null,
-					lng_end: null,
-					duration: 240, // 4 horas
-					status: 'closed',
-					synced: 1
-				},
-				{
-					id: 2,
-					start_time: new Date(2026, 5, 21, 14, 0),
-					end_time: new Date(2026, 5, 21, 18, 0),
-					lat_start: null,
-					lng_start: null,
-					lat_end: null,
-					lng_end: null,
-					duration: 240, // 4 horas
-					status: 'closed',
-					synced: 1
-				}
-			];
+			const jornadas: Jornada[] = [jornadaCerrada(1, 9, 240), jornadaCerrada(2, 14, 240)];
 
 			const resultado = calcularResumenDia(jornadas);
 
@@ -116,32 +123,7 @@ describe('dashboard utils', () => {
 
 		// AC: Jacksonville con duration null (abiertas) no cuentan
 		it('debería ignorar jornadas abiertas (duration null) en el cálculo de horas', () => {
-			const jornadas: Jornada[] = [
-				{
-					id: 1,
-					start_time: new Date(2026, 5, 21, 9, 0),
-					end_time: new Date(2026, 5, 21, 13, 0),
-					lat_start: null,
-					lng_start: null,
-					lat_end: null,
-					lng_end: null,
-					duration: 240, // 4 horas (cerrada)
-					status: 'closed',
-					synced: 1
-				},
-				{
-					id: 2,
-					start_time: new Date(2026, 5, 21, 14, 0),
-					end_time: null,
-					lat_start: null,
-					lng_start: null,
-					lat_end: null,
-					lng_end: null,
-					duration: null, // abierta, no cuenta
-					status: 'open',
-					synced: 0
-				}
-			];
+			const jornadas: Jornada[] = [jornadaCerrada(1, 9, 240), jornadaAbierta(2, 14)];
 
 			const resultado = calcularResumenDia(jornadas);
 
@@ -152,32 +134,7 @@ describe('dashboard utils', () => {
 		});
 
 		it('debería retornar cero horas si todas las jornadas están abiertas', () => {
-			const jornadas: Jornada[] = [
-				{
-					id: 1,
-					start_time: new Date(2026, 5, 21, 9, 0),
-					end_time: null,
-					lat_start: null,
-					lng_start: null,
-					lat_end: null,
-					lng_end: null,
-					duration: null,
-					status: 'open',
-					synced: 0
-				},
-				{
-					id: 2,
-					start_time: new Date(2026, 5, 21, 15, 0),
-					end_time: null,
-					lat_start: null,
-					lng_start: null,
-					lat_end: null,
-					lng_end: null,
-					duration: null,
-					status: 'open',
-					synced: 0
-				}
-			];
+			const jornadas: Jornada[] = [jornadaAbierta(1, 9), jornadaAbierta(2, 15)];
 
 			const resultado = calcularResumenDia(jornadas);
 
