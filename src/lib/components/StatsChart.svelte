@@ -32,15 +32,19 @@
 			for (let i = 0; i < numLabels; i++) {
 				const total = calcularTotalApilado(chartInstance.data.datasets, i);
 				if (total <= 0) continue;
-				const bar = meta.data[i];
+				const bar = meta.data[i] as unknown as { x: number; y: number; height: number };
 				if (!bar) continue;
 				const valor = Math.round(total * 10) / 10;
+				const texto = `${valor}h`;
+				const centerY = bar.y + bar.height / 2;
 				ctx.save();
 				ctx.fillStyle = '#f8fafc';
-				ctx.font = '12px system-ui, sans-serif';
+				ctx.font = '11px system-ui, sans-serif';
 				ctx.textAlign = 'center';
-				ctx.textBaseline = 'bottom';
-				ctx.fillText(`${valor}h`, bar.x, bar.y - 4);
+				ctx.textBaseline = 'middle';
+				ctx.translate(bar.x, centerY);
+				ctx.rotate(-Math.PI / 2);
+				ctx.fillText(texto, 0, 0);
 				ctx.restore();
 			}
 		}
