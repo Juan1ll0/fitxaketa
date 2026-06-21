@@ -1,26 +1,52 @@
 <script lang="ts">
+	import { onMount, onDestroy } from 'svelte';
 	import {
 		initAppState,
 		startJornada,
 		stopJornada,
 		subscribe,
 		getClockedIn,
-		getElapsed
+		getElapsed,
+		getJornadasHoy,
+		getResumenHoy
 	} from '$lib/stores/app-state';
+	import { formatearFecha, type ResumenDia } from '$lib/utils/dashboard';
+	import type { Jornada } from '$lib/db';
 
 	let clockedIn = $state(false);
 	let elapsed = $state('00:00:00');
+	let hoy = $state('');
+	let jornadasHoy = $state<Jornada[]>([]);
+	let resumen = $state<ResumenDia>({ totalHoras: 0, totalJornadas: 0 });
 
-	$effect(() => {
-		initAppState();
-		const unsubscribe = subscribe(() => {
+	let unsubscribe: (() => void) | null = null;
+	let fechaInterval: ReturnType<typeof setInterval> | null = null;
+
+	onMount(async () => {
+		await initAppState();
+		hoy = formatearFecha(new Date());
+
+		unsubscribe = subscribe(() => {
 			clockedIn = getClockedIn();
 			elapsed = getElapsed();
+			jornadasHoy = getJornadasHoy();
+			resumen = getResumenHoy();
 		});
-		return unsubscribe;
+
+		fechaInterval = setInterval(() => {
+			const nuevaFecha = formatearFecha(new Date());
+			if (nuevaFecha !== hoy) {
+				hoy = nuevaFecha;
+			}
+		}, 60000);
 	});
 
-	async function toggleClock() {
+	onDestroy(() => {
+		if (unsubscribe) unsubscribe();
+		if (fechaInterval) clearInterval(fechaInterval);
+	});
+
+	async function handleFichar() {
 		if (clockedIn) {
 			await stopJornada();
 		} else {
@@ -33,25 +59,37 @@
 	<title>Fitxaketa</title>
 </svelte:head>
 
-<div class="flex min-h-screen flex-col items-center justify-center px-4">
-	<div class="w-full max-w-sm space-y-8 text-center">
-		<div>
-			<h1 class="text-3xl font-bold tracking-tight">Fitxaketa</h1>
-			<p class="mt-2 text-text-muted">Registro de jornada</p>
-		</div>
+<div class="flex min-h-screen flex-col items-center justify-center px-4 py-8">
+	<p class="text-lg text-text-muted">{hoy}</p>
 
-		<div class="rounded-2xl bg-surface-light p-8">
-			<p class="font-mono text-5xl font-bold tabular-nums tracking-wider">{elapsed}</p>
-			<button
-				onclick={toggleClock}
-				class="mt-6 w-full rounded-xl px-6 py-4 text-lg font-semibold transition-colors {clockedIn
-					? 'bg-danger hover:bg-danger-dark text-white'
-					: 'bg-primary hover:bg-primary-dark text-white'}"
-			>
-				{clockedIn ? 'Fichar salida' : 'Fichar entrada'}
-			</button>
-		</div>
+	<div class="mt-8 text-center">
+		<p class="font-mono text-6xl font-bold tabular-nums tracking-wider text-text">{elapsed}</p>
+	</div>
 
-		<a href="/registros" class="text-primary hover:text-primary-dark underline"> Ver registros </a>
+	<div class="mt-4">
+		{#if clockedIn}
+			<span class="font-semibold text-primary">Trabajando</span>
+		{:else}
+			<span class="text-text-muted">Descansando</span>
+		{/if}
+	</div>
+
+	<button
+		onclick={handleFichar}
+		class="mt-8 rounded-xl px-8 py-4 text-lg font-semibold text-white transition-colors"
+		class:bg-primary={!clockedIn}
+		class:hover:bg-primary-dark={!clockedIn}
+		class:bg-danger={clockedIn}
+		class:hover:bg-danger-dark={clockedIn}
+	>
+		{clockedIn ? 'Fichar salida' : 'Fichar entrada'}
+	</button>
+
+	<div class="mt-8 text-center text-text-muted">
+		<p class="text-sm">
+			Hoy: {Math.floor(resumen.totalHoras)}h {Math.round((resumen.totalHoras % 1) * 60)}m |
+			{jornadasHoy.length}
+			{jornadasHoy.length === 1 ? 'jornada' : 'jornadas'}
+		</p>
 	</div>
 </div>

@@ -1,11 +1,7 @@
 import type { Jornada } from '$lib/db';
+import type { ResumenDia } from '$lib/utils/dashboard';
 
 export type Periodo = 'semana' | 'mes' | 'trimestre' | 'año';
-
-export interface ResumenDia {
-	totalHoras: number;
-	numeroJornadas: number;
-}
 
 type Listener = () => void;
 
@@ -18,7 +14,7 @@ export const appState = $state({
 	elapsed: '00:00:00',
 	jornadas: [] as Jornada[],
 	jornadasHoy: [] as Jornada[],
-	resumenHoy: { totalHoras: 0, numeroJornadas: 0 } as ResumenDia,
+	resumenHoy: { totalHoras: 0, totalJornadas: 0 } as ResumenDia,
 	periodoSeleccionado: 'mes' as Periodo,
 	cargando: false
 });
