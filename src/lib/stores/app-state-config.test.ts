@@ -17,7 +17,6 @@ function settingsInput(over: Partial<Settings> = {}): Omit<Settings, 'id'> {
 		horas_semanales: 40,
 		dias_laborables: 5,
 		redondeo_minutos: 0,
-		redondeo_aplicar_a: 'ambas',
 		...over
 	};
 }

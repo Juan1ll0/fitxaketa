@@ -31,8 +31,7 @@ export interface Settings {
 	min_jornada_minutos: number; // 0 = desactivado
 	horas_semanales: number;
 	dias_laborables: number; // 1..7
-	redondeo_minutos: number; // 0 = desactivado
-	redondeo_aplicar_a: 'entrada' | 'salida' | 'ambas';
+	redondeo_minutos: number; // 0 = desactivado; redondea la DURACIÓN de la jornada
 }
 
 class FitxaketaDB extends Dexie {
@@ -137,7 +136,6 @@ export async function seedSettingsIfEmpty(): Promise<void> {
 		min_jornada_minutos: 0,
 		horas_semanales: 0,
 		dias_laborables: 5,
-		redondeo_minutos: 0,
-		redondeo_aplicar_a: 'ambas'
+		redondeo_minutos: 0
 	});
 }

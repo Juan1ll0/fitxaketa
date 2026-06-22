@@ -10,8 +10,7 @@ function contrato(semanales: number, redondeo = 0): Settings[] {
 			min_jornada_minutos: 0,
 			horas_semanales: semanales,
 			dias_laborables: 5,
-			redondeo_minutos: redondeo,
-			redondeo_aplicar_a: 'ambas'
+			redondeo_minutos: redondeo
 		}
 	];
 }
@@ -47,8 +46,8 @@ describe('calcularResumenPeriodo (con settings)', () => {
 			[jornada(new Date(2026, 5, 15, 9, 43), new Date(2026, 5, 15, 17, 52))],
 			contrato(40, 15)
 		);
-		// efectiva 9:45→17:45 = 480min; real 9:43→17:52 = 489min
-		expect(r.totalHoras).toBeCloseTo(480 / 60);
+		// real 9:43→17:52 = 489min; redondeada a 15 → 495min
+		expect(r.totalHoras).toBeCloseTo(495 / 60);
 		expect(r.totalHorasReal).toBeCloseTo(489 / 60);
 	});
 

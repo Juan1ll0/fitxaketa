@@ -11,8 +11,7 @@ const contrato: Settings[] = [
 		min_jornada_minutos: 0,
 		horas_semanales: 40,
 		dias_laborables: 5,
-		redondeo_minutos: 0,
-		redondeo_aplicar_a: 'ambas'
+		redondeo_minutos: 0
 	}
 ];
 

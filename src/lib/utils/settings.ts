@@ -7,8 +7,7 @@ const SETTINGS_DEFECTO: Settings = {
 	min_jornada_minutos: 0,
 	horas_semanales: 0,
 	dias_laborables: 5,
-	redondeo_minutos: 0,
-	redondeo_aplicar_a: 'ambas'
+	redondeo_minutos: 0
 };
 
 /** Snapshots ordenados por `fecha` ascendente (defensivo: no asume orden). */

@@ -12,7 +12,6 @@
 	let horasSemanales = $state(0);
 	let diasLaborables = $state(5);
 	let redondeoMin = $state(0);
-	let redondeoAplicarA = $state<'entrada' | 'salida' | 'ambas'>('ambas');
 	let estado = $state<'idle' | 'loading' | 'error'>('idle');
 
 	let horasDiarias = $derived(diasLaborables > 0 ? horasSemanales / diasLaborables : 0);
@@ -43,7 +42,6 @@
 		horasSemanales = s.horas_semanales;
 		diasLaborables = s.dias_laborables;
 		redondeoMin = s.redondeo_minutos;
-		redondeoAplicarA = s.redondeo_aplicar_a;
 		seeded = true;
 	});
 
@@ -56,8 +54,7 @@
 				min_jornada_minutos: minJornada,
 				horas_semanales: horasSemanales,
 				dias_laborables: diasLaborables,
-				redondeo_minutos: redondeoMin,
-				redondeo_aplicar_a: redondeoAplicarA
+				redondeo_minutos: redondeoMin
 			});
 			estado = 'idle';
 		} catch {
@@ -104,20 +101,10 @@
 				>
 			</p>
 
-			<div class="grid grid-cols-2 gap-3">
-				<label class="block">
-					<span class="text-sm text-text-muted">Redondeo (min, 0 = desactivado)</span>
-					<input type="number" min="0" bind:value={redondeoMin} class={inputCls} />
-				</label>
-				<label class="block">
-					<span class="text-sm text-text-muted">Aplicar a</span>
-					<select bind:value={redondeoAplicarA} class={inputCls}>
-						<option value="entrada">Entrada</option>
-						<option value="salida">Salida</option>
-						<option value="ambas">Ambas</option>
-					</select>
-				</label>
-			</div>
+			<label class="block">
+				<span class="text-sm text-text-muted">Redondeo de la duración (min, 0 = desactivado)</span>
+				<input type="number" min="0" bind:value={redondeoMin} class={inputCls} />
+			</label>
 
 			<button
 				type="button"

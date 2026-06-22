@@ -17,8 +17,7 @@ function base(fecha: Date, semanales: number, dias: number): Settings {
 		min_jornada_minutos: 0,
 		horas_semanales: semanales,
 		dias_laborables: dias,
-		redondeo_minutos: 0,
-		redondeo_aplicar_a: 'ambas'
+		redondeo_minutos: 0
 	};
 }
 
