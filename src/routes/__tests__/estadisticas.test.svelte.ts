@@ -15,11 +15,13 @@ import EstadisticasPage from '../../routes/estadisticas/+page.svelte';
 const mocks = vi.hoisted(() => {
 	const mockSubscribe = vi.fn();
 	const mockGetJornadas = vi.fn<() => Jornada[]>().mockReturnValue([] as Jornada[]);
+	const mockGetSettings = vi.fn<() => unknown[]>().mockReturnValue([]);
 	const mockCargarJornadas = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
 
 	return {
 		mockSubscribe,
 		mockGetJornadas,
+		mockGetSettings,
 		mockCargarJornadas
 	};
 });
@@ -27,6 +29,7 @@ const mocks = vi.hoisted(() => {
 vi.mock('$lib/stores/app-state', () => ({
 	subscribe: mocks.mockSubscribe,
 	getJornadas: mocks.mockGetJornadas,
+	getSettings: mocks.mockGetSettings,
 	cargarJornadas: mocks.mockCargarJornadas
 }));
 
@@ -279,11 +282,11 @@ describe('estadisticas/+page.svelte', () => {
 	describe('cambiar periodo actualiza la gráfica y los datos', () => {
 		it('al cambiar a "Semana" se muestran datos de la semana', async () => {
 			subscribeConCallbackInmediato();
-			const hace3dias = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+			const dentroSemana = new Date(Date.now()); // hoy: siempre dentro de la semana actual
 			const hace10dias = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000);
-			// Una jornada hace 3 días (dentro de semana) y otra hace 10 días (fuera de semana)
+			// Una jornada de hoy (dentro de semana) y otra hace 10 días (fuera de semana)
 			mocks.mockGetJornadas.mockReturnValue([
-				jornadaCerrada(1, hace3dias, 480),
+				jornadaCerrada(1, dentroSemana, 480),
 				jornadaCerrada(2, hace10dias, 480)
 			]);
 
