@@ -37,7 +37,7 @@ function etiquetaDia(fecha: Date, periodo: Periodo): string {
 }
 
 function datosStacked(jornadas: Jornada[], periodo: Periodo, snapshots: Settings[]): DatosGrafica {
-	const hoy = inicioDia(new Date());
+	const hoy = inicioDia(new Date(Date.now()));
 	const primerDia = settingsActual(snapshots).primer_dia_semana;
 	const { inicio, fin } = obtenerRangoPeriodo(periodo, hoy, primerDia);
 

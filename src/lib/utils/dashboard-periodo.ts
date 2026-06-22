@@ -44,7 +44,7 @@ export function filtrarPorPeriodo(
 	periodo: Periodo,
 	primerDia: number = PRIMER_DIA_SEMANA
 ): Jornada[] {
-	const hoy = inicioDia(new Date());
+	const hoy = inicioDia(new Date(Date.now()));
 	const { inicio, fin } = obtenerRangoPeriodo(periodo, hoy, primerDia);
 
 	return jornadas.filter((jornada) => {
