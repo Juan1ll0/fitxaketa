@@ -250,35 +250,6 @@ describe('+page.svelte', () => {
 		});
 	});
 
-	describe('Persistencia tras recarga (mock de initAppState)', () => {
-		it('debería llamar a initAppState en onMount', async () => {
-			subscribeConCallbackInmediato();
-
-			render(Page);
-
-			await waitFor(() => {
-				expect(mocks.mockInitAppState).toHaveBeenCalled();
-			});
-		});
-
-		it('debería mantener el estado tras re-llamar a initAppState', async () => {
-			subscribeConCallbackInmediato();
-
-			render(Page);
-
-			// Primera inicialización
-			await waitFor(() => {
-				expect(mocks.mockInitAppState).toHaveBeenCalledTimes(1);
-			});
-
-			// Simular recarga (llamar initAppState de nuevo)
-			mocks.mockInitAppState.mockClear();
-			await mocks.mockInitAppState();
-
-			expect(mocks.mockInitAppState).toHaveBeenCalled();
-		});
-	});
-
 	describe('Suscripción reactiva al store', () => {
 		it('debería suscribirse al store usando subscribe()', async () => {
 			subscribeConCallbackInmediato();

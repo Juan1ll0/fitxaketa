@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import {
-		initAppState,
 		startJornada,
 		stopJornada,
 		subscribe,
@@ -22,8 +21,8 @@
 	let unsubscribe: (() => void) | null = null;
 	let fechaInterval: ReturnType<typeof setInterval> | null = null;
 
-	onMount(async () => {
-		await initAppState();
+	onMount(() => {
+		// initAppState lo dispara el layout (común a todas las rutas).
 		hoy = formatearFecha(new Date());
 
 		unsubscribe = subscribe(() => {
