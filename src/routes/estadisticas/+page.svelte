@@ -107,7 +107,11 @@
 		</div>
 
 		{#if jornadasFiltradas.length > 0}
-			<div class="mt-6 grid grid-cols-2 gap-4">
+			<div class="mt-6 grid grid-cols-3 gap-4">
+				<div class="row-span-2 flex flex-col justify-center rounded-xl p-4 {cajaExceso}">
+					<p class="text-sm text-text-muted">Exceso</p>
+					<p class="text-2xl font-bold {textoExceso}">{balanceTexto(resumen.balanceMinutos)}</p>
+				</div>
 				<div class="rounded-xl bg-surface-light p-4">
 					<p class="text-sm text-text-muted">Total horas</p>
 					<p class="text-xl font-bold text-text">{formatearHorasDecimal(resumen.totalHoras)}</p>
@@ -128,10 +132,6 @@
 				<div class="rounded-xl bg-surface-light p-4">
 					<p class="text-sm text-text-muted">Jornadas</p>
 					<p class="text-xl font-bold text-text">{resumen.totalJornadas}</p>
-				</div>
-				<div class="col-span-2 rounded-xl p-4 {cajaExceso}">
-					<p class="text-sm text-text-muted">Exceso</p>
-					<p class="text-xl font-bold {textoExceso}">{balanceTexto(resumen.balanceMinutos)}</p>
 				</div>
 			</div>
 		{/if}
