@@ -1,6 +1,12 @@
 <script lang="ts">
 	import { afterNavigate } from '$app/navigation';
-	import { subscribe, getJornadas, cargarJornadas, type Periodo } from '$lib/stores/app-state';
+	import {
+		subscribe,
+		getJornadas,
+		getSettings,
+		cargarJornadas,
+		type Periodo
+	} from '$lib/stores/app-state';
 	import {
 		filtrarPorPeriodo,
 		calcularResumenPeriodo,
@@ -8,15 +14,18 @@
 		formatearFechaLarga,
 		prepararDatosGrafica
 	} from '$lib/utils/dashboard';
-	import type { Jornada } from '$lib/db';
+	import { settingsActual } from '$lib/utils/settings';
+	import type { Jornada, Settings } from '$lib/db';
 	import StatsChart from '$lib/components/StatsChart.svelte';
 
 	let jornadas = $state<Jornada[]>([]);
+	let settings = $state<Settings[]>([]);
 	let periodo = $state<Periodo>('mes');
 
-	let jornadasFiltradas = $derived(filtrarPorPeriodo(jornadas, periodo));
-	let resumen = $derived(calcularResumenPeriodo(jornadasFiltradas));
-	let datosGrafica = $derived(prepararDatosGrafica(jornadasFiltradas, periodo));
+	let primerDia = $derived(settingsActual(settings).primer_dia_semana);
+	let jornadasFiltradas = $derived(filtrarPorPeriodo(jornadas, periodo, primerDia));
+	let resumen = $derived(calcularResumenPeriodo(jornadasFiltradas, settings));
+	let datosGrafica = $derived(prepararDatosGrafica(jornadasFiltradas, periodo, settings));
 	let fechaHoy = $derived(formatearFechaLarga(new Date()));
 
 	const periodos: { value: Periodo; label: string }[] = [
@@ -25,9 +34,30 @@
 		{ value: 'año', label: 'Año' }
 	];
 
+	function balanceTexto(min: number): string {
+		const signo = min > 0 ? '+' : min < 0 ? '−' : '';
+		return signo + formatearHorasDecimal(Math.abs(min) / 60);
+	}
+
+	let cajaExceso = $derived(
+		resumen.balanceMinutos > 0
+			? 'border border-success/30 bg-success/10'
+			: resumen.balanceMinutos < 0
+				? 'border border-warning/30 bg-warning/10'
+				: 'bg-surface-light'
+	);
+	let textoExceso = $derived(
+		resumen.balanceMinutos > 0
+			? 'text-success'
+			: resumen.balanceMinutos < 0
+				? 'text-warning'
+				: 'text-text'
+	);
+
 	$effect(() => {
 		const unsubscribe = subscribe(() => {
 			jornadas = getJornadas();
+			settings = getSettings();
 		});
 		return unsubscribe;
 	});
@@ -81,6 +111,11 @@
 				<div class="rounded-xl bg-surface-light p-4">
 					<p class="text-sm text-text-muted">Total horas</p>
 					<p class="text-xl font-bold text-text">{formatearHorasDecimal(resumen.totalHoras)}</p>
+					{#if resumen.totalHorasReal !== resumen.totalHoras}
+						<p class="text-xs text-text-muted">
+							Real: {formatearHorasDecimal(resumen.totalHorasReal)}
+						</p>
+					{/if}
 				</div>
 				<div class="rounded-xl bg-surface-light p-4">
 					<p class="text-sm text-text-muted">Media diaria</p>
@@ -93,6 +128,10 @@
 				<div class="rounded-xl bg-surface-light p-4">
 					<p class="text-sm text-text-muted">Jornadas</p>
 					<p class="text-xl font-bold text-text">{resumen.totalJornadas}</p>
+				</div>
+				<div class="col-span-2 rounded-xl p-4 {cajaExceso}">
+					<p class="text-sm text-text-muted">Exceso</p>
+					<p class="text-xl font-bold {textoExceso}">{balanceTexto(resumen.balanceMinutos)}</p>
 				</div>
 			</div>
 		{/if}
