@@ -1,48 +1,19 @@
-import { createJornada, closeJornada, getOpenJornada, getAllJornadas, type Jornada } from '$lib/db';
-import { calcularResumenDia, type ResumenDia } from '$lib/utils/dashboard';
-import { diaDeJornada, mismoDia } from '$lib/utils/fecha-negocio';
+import {
+	db,
+	createJornada,
+	closeJornada,
+	getOpenJornada,
+	getAllJornadas,
+	addSettingsSnapshot,
+	getAllSettings,
+	seedSettingsIfEmpty,
+	type Jornada,
+	type Settings
+} from '$lib/db';
+import { calcularHoy } from '$lib/utils/dashboard';
+import { settingsActual } from '$lib/utils/settings';
 import { appState, notificarCambio, type Periodo } from './app-state.svelte';
-
-let intervalId: ReturnType<typeof setInterval> | null = null;
-
-function tick() {
-	if (!appState.startTime) return;
-	const diff = Date.now() - appState.startTime.getTime();
-	const h = String(Math.floor(diff / 3600000)).padStart(2, '0');
-	const m = String(Math.floor((diff % 3600000) / 60000)).padStart(2, '0');
-	const s = String(Math.floor((diff % 60000) / 1000)).padStart(2, '0');
-	appState.elapsed = `${h}:${m}:${s}`;
-	notificarCambio();
-}
-
-function startTimer() {
-	if (intervalId) clearInterval(intervalId);
-	intervalId = setInterval(tick, 1000);
-}
-
-function stopTimer() {
-	if (intervalId) clearInterval(intervalId);
-	intervalId = null;
-}
-
-function calcularHoy(jornadas: Jornada[]): { hoy: Jornada[]; resumen: ResumenDia } {
-	const ahora = new Date();
-	const filtradas = jornadas.filter((j) => mismoDia(diaDeJornada(j), ahora));
-	const resumenCerradas = calcularResumenDia(filtradas.filter((j) => j.status === 'closed'));
-	const abierta = filtradas.find((j) => j.status === 'open');
-	const minutosAbierta = abierta
-		? Math.floor((Date.now() - abierta.start_time.getTime()) / 60000)
-		: 0;
-	const totalHoras =
-		Math.round(((resumenCerradas.totalHoras * 60 + minutosAbierta) / 60) * 100) / 100;
-	return {
-		hoy: filtradas,
-		resumen: {
-			totalHoras,
-			totalJornadas: resumenCerradas.totalJornadas + (abierta ? 1 : 0)
-		}
-	};
-}
+import { tick, startTimer, stopTimer } from './app-timer';
 
 export async function cargarJornadas(): Promise<void> {
 	appState.cargando = true;
@@ -59,7 +30,19 @@ export function setPeriodo(periodo: Periodo): void {
 	notificarCambio();
 }
 
+async function cargarSettings(): Promise<void> {
+	appState.settings = await getAllSettings();
+}
+
+export async function guardarSettings(input: Omit<Settings, 'id'>): Promise<void> {
+	await addSettingsSnapshot(input);
+	await cargarSettings();
+	notificarCambio();
+}
+
 export async function initAppState(): Promise<void> {
+	await seedSettingsIfEmpty();
+	await cargarSettings();
 	const open: Jornada | undefined = await getOpenJornada();
 	if (open && open.id != null) {
 		appState.clockedIn = true;
@@ -77,14 +60,22 @@ export async function initAppState(): Promise<void> {
 	await cargarJornadas();
 }
 
-export async function startJornada(coords?: {
-	lat: number | null;
-	lng: number | null;
-}): Promise<void> {
-	const id = await createJornada({
-		lat_start: coords?.lat,
-		lng_start: coords?.lng
-	});
+type Coords = { lat: number | null; lng: number | null };
+
+function normalizarCoords(coords?: Coords): Coords {
+	return { lat: coords?.lat ?? null, lng: coords?.lng ?? null };
+}
+
+function resetEstadoJornada(): void {
+	appState.clockedIn = false;
+	appState.openJornadaId = null;
+	appState.startTime = null;
+	appState.elapsed = '00:00:00';
+}
+
+export async function startJornada(coords?: Coords): Promise<void> {
+	const { lat, lng } = normalizarCoords(coords);
+	const id = await createJornada({ lat_start: lat, lng_start: lng });
 	appState.clockedIn = true;
 	appState.openJornadaId = id;
 	appState.startTime = new Date();
@@ -93,21 +84,34 @@ export async function startJornada(coords?: {
 	await cargarJornadas();
 }
 
-export async function stopJornada(coords?: {
-	lat: number | null;
-	lng: number | null;
-}): Promise<void> {
-	if (appState.openJornadaId == null) return;
-	stopTimer();
-	await closeJornada(appState.openJornadaId, {
-		lat: coords?.lat ?? null,
-		lng: coords?.lng ?? null
-	});
-	appState.clockedIn = false;
-	appState.openJornadaId = null;
-	appState.startTime = null;
-	appState.elapsed = '00:00:00';
+function minJornadaMinutos(): number {
+	return appState.settings.length ? settingsActual(appState.settings).min_jornada_minutos : 0;
+}
+
+async function descartarJornada(id: number): Promise<void> {
+	await db.jornadas.delete(id);
+	resetEstadoJornada();
 	await cargarJornadas();
+}
+
+/**
+ * Cierra la jornada abierta. Si la duración real (sin redondeo) es menor que el
+ * mínimo configurado, la **descarta** y devuelve `true`. `false` = guardada.
+ */
+export async function stopJornada(coords?: Coords): Promise<boolean> {
+	const id = appState.openJornadaId;
+	if (id == null) return false;
+	stopTimer();
+	const inicio = appState.startTime?.getTime() ?? Date.now();
+	const min = minJornadaMinutos();
+	if (min > 0 && (Date.now() - inicio) / 60000 < min) {
+		await descartarJornada(id);
+		return true;
+	}
+	await closeJornada(id, normalizarCoords(coords));
+	resetEstadoJornada();
+	await cargarJornadas();
+	return false;
 }
 
 export {
@@ -117,6 +121,7 @@ export {
 	getClockedIn,
 	getElapsed,
 	getJornadas,
+	getSettings,
 	getJornadasHoy,
 	getResumenHoy,
 	getPeriodoSeleccionado,

@@ -18,13 +18,36 @@ export interface JornadaInput {
 	lng_start?: number | null;
 }
 
+/**
+ * Configuración del usuario, colección append-only: cada cambio inserta un
+ * snapshot completo fechado (nunca update/delete). Las horas diarias NO se
+ * almacenan (derivadas: `horas_semanales / dias_laborables`). El token de
+ * Google NO va aquí (se modela en la spec 004).
+ */
+export interface Settings {
+	id?: number;
+	fecha: Date;
+	primer_dia_semana: number; // 0=domingo … 1=lunes (default) … 6=sábado
+	min_jornada_minutos: number; // 0 = desactivado
+	horas_semanales: number;
+	dias_laborables: number; // 1..7
+	redondeo_minutos: number; // 0 = desactivado
+	redondeo_aplicar_a: 'entrada' | 'salida' | 'ambas';
+}
+
 class FitxaketaDB extends Dexie {
 	jornadas!: Table<Jornada, number>;
+	settings!: Table<Settings, number>;
 
 	constructor() {
 		super('fitxaketa');
 		this.version(3).stores({
 			jornadas: '++id, start_time, end_time, status, synced'
+		});
+		// v4: solo añade la tabla `settings` (append-only); no toca jornadas.
+		this.version(4).stores({
+			jornadas: '++id, start_time, end_time, status, synced',
+			settings: '++id, fecha'
 		});
 	}
 }
@@ -89,4 +112,32 @@ export async function clearSynced(): Promise<void> {
 		.equals(1)
 		.and((jornada) => jornada.start_time < thirtyDaysAgo)
 		.delete();
+}
+
+/** Inserta un snapshot de configuración (append-only: nunca update/delete). */
+export async function addSettingsSnapshot(s: Omit<Settings, 'id'>): Promise<number> {
+	return await db.settings.add(s);
+}
+
+/** Todos los snapshots de configuración ordenados por `fecha` ascendente. */
+export async function getAllSettings(): Promise<Settings[]> {
+	return await db.settings.orderBy('fecha').toArray();
+}
+
+/**
+ * Siembra un snapshot por defecto (contrato neutro → objetivo 0 → sin exceso)
+ * si la tabla está vacía. `fecha` temprana para que `settingsVigente` siempre
+ * encuentre uno.
+ */
+export async function seedSettingsIfEmpty(): Promise<void> {
+	if ((await db.settings.count()) > 0) return;
+	await db.settings.add({
+		fecha: new Date(2000, 0, 1),
+		primer_dia_semana: 1,
+		min_jornada_minutos: 0,
+		horas_semanales: 0,
+		dias_laborables: 5,
+		redondeo_minutos: 0,
+		redondeo_aplicar_a: 'ambas'
+	});
 }

@@ -1,4 +1,4 @@
-import type { Jornada } from '$lib/db';
+import type { Jornada, Settings } from '$lib/db';
 import type { ResumenDia } from '$lib/utils/dashboard';
 
 export type Periodo = 'semana' | 'mes' | 'trimestre' | 'año';
@@ -13,6 +13,7 @@ export const appState = $state({
 	startTime: null as Date | null,
 	elapsed: '00:00:00',
 	jornadas: [] as Jornada[],
+	settings: [] as Settings[],
 	jornadasHoy: [] as Jornada[],
 	resumenHoy: { totalHoras: 0, totalJornadas: 0 } as ResumenDia,
 	periodoSeleccionado: 'mes' as Periodo,
@@ -42,6 +43,10 @@ export function getElapsed(): string {
 
 export function getJornadas(): Jornada[] {
 	return appState.jornadas;
+}
+
+export function getSettings(): Settings[] {
+	return appState.settings;
 }
 
 export function getJornadasHoy(): Jornada[] {
