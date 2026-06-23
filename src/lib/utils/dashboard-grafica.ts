@@ -1,7 +1,7 @@
 import type { Jornada, Settings } from '$lib/db';
 import type { Periodo } from '$lib/stores/app-state';
 import type { DatosGrafica } from '$lib/utils/dashboard-types';
-import { obtenerRangoPeriodo } from '$lib/utils/dashboard-periodo';
+import { obtenerRangoPeriodo } from '$lib/utils/dashboard-navegacion';
 import { inicioDia, claveDia, diaDeJornada } from '$lib/utils/fecha-negocio';
 import { duracionEfectivaMinutos } from '$lib/utils/redondeo';
 import { settingsActual } from '$lib/utils/settings';
@@ -26,18 +26,28 @@ const NOMBRES_MES_CORTO = [
 ];
 
 const COLOR_PRIMARIO = '#3b82f6';
+const COLOR_DOMINGO = '#ef4444';
+const COLOR_NORMAL = '#94a3b8';
+
+const DIAS_SEMANA_CORTO = ['D', 'L', 'M', 'X', 'J', 'V', 'S'];
 
 function etiquetaDia(fecha: Date, periodo: Periodo): string {
 	const day = String(fecha.getDate()).padStart(2, '0');
 	if (periodo === 'mes' || periodo === 'semana') {
-		return day;
+		const diaSemana = DIAS_SEMANA_CORTO[fecha.getDay()];
+		return `${diaSemana}-${day}`;
 	}
 	const month = String(fecha.getMonth() + 1).padStart(2, '0');
 	return `${day}/${month}`;
 }
 
-function datosStacked(jornadas: Jornada[], periodo: Periodo, snapshots: Settings[]): DatosGrafica {
-	const hoy = inicioDia(new Date(Date.now()));
+function datosStacked(
+	jornadas: Jornada[],
+	periodo: Periodo,
+	snapshots: Settings[],
+	fechaRef: Date
+): DatosGrafica {
+	const hoy = inicioDia(fechaRef);
 	const primerDia = settingsActual(snapshots).primer_dia_semana;
 	const { inicio, fin } = obtenerRangoPeriodo(periodo, hoy, primerDia);
 
@@ -64,6 +74,10 @@ function datosStacked(jornadas: Jornada[], periodo: Periodo, snapshots: Settings
 	}
 
 	const labels = diasUnicos.map((key) => etiquetasDia.get(key) ?? '');
+	const labelColors = diasUnicos.map((key) => {
+		const fecha = fechasPorDia.get(key);
+		return fecha?.getDay() === 0 ? COLOR_DOMINGO : COLOR_NORMAL;
+	});
 	const datasets = construirDatasetsApilados(diasUnicos, jornadasPorDia, snapshots);
 
 	const { objetivoDiarioPorLabel, balancePorLabel } = objetivoYBalancePorLabel(
@@ -73,7 +87,7 @@ function datosStacked(jornadas: Jornada[], periodo: Periodo, snapshots: Settings
 		snapshots
 	);
 
-	return { labels, datasets, objetivoDiarioPorLabel, balancePorLabel };
+	return { labels, labelColors, datasets, objetivoDiarioPorLabel, balancePorLabel };
 }
 
 function datosPorMes(jornadas: Jornada[], snapshots: Settings[]): DatosGrafica {
@@ -109,7 +123,8 @@ function datosPorMes(jornadas: Jornada[], snapshots: Settings[]): DatosGrafica {
 export function prepararDatosGrafica(
 	jornadas: Jornada[],
 	periodo: Periodo,
-	snapshots: Settings[] = []
+	snapshots: Settings[] = [],
+	fechaRef: Date = new Date(Date.now())
 ): DatosGrafica {
 	switch (periodo) {
 		case 'año':
@@ -117,6 +132,6 @@ export function prepararDatosGrafica(
 		case 'semana':
 		case 'mes':
 		case 'trimestre':
-			return datosStacked(jornadas, periodo, snapshots);
+			return datosStacked(jornadas, periodo, snapshots, fechaRef);
 	}
 }

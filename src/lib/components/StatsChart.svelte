@@ -10,10 +10,16 @@
 
 	let canvas: HTMLCanvasElement;
 	let chart = $state<Chart | null>(null);
-	let chartDatos: DatosGrafica = { labels: [], datasets: [] };
+	let chartDatos: DatosGrafica = $state({ labels: [], datasets: [] });
 	let isDestroyed = false;
 
 	let etiquetaX = $derived(etiquetaEjeX(periodo));
+
+	const COLOR_NORMAL = '#94a3b8';
+
+	function tickColor(context: { index: number }): string {
+		return chartDatos.labelColors?.[context.index] ?? COLOR_NORMAL;
+	}
 
 	const COLOR_OBJETIVO = '#ef4444';
 
@@ -95,7 +101,7 @@
 				scales: {
 					x: {
 						stacked: true,
-						ticks: { color: '#94a3b8' },
+						ticks: { color: tickColor },
 						grid: { display: false }
 					},
 					y: {
@@ -147,7 +153,4 @@
 	<div class="h-64 w-full">
 		<canvas bind:this={canvas}></canvas>
 	</div>
-	{#if etiquetaX}
-		<p class="mt-2 text-center text-sm text-text-muted">{etiquetaX}</p>
-	{/if}
 </div>

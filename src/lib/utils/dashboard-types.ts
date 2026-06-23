@@ -31,6 +31,7 @@ export interface DatasetGrafica {
 
 export interface DatosGrafica {
 	labels: string[];
+	labelColors?: string[]; // colors per label, e.g. '#ef4444' for Sunday
 	datasets: DatasetGrafica[];
 	balancePorLabel?: number[]; // por día/categoría del eje X (minutos, con signo)
 	objetivoDiarioPorLabel?: number[]; // por día/categoría del eje X (horas)
