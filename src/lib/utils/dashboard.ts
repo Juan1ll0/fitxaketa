@@ -5,6 +5,7 @@ export {
 	formatearHora,
 	formatearDuracion,
 	formatearHorasDecimal,
+	formatearHorasCorto,
 	etiquetaEjeX
 } from '$lib/utils/dashboard-format';
 export {

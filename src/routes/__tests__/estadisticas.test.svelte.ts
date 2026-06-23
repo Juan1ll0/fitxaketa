@@ -345,9 +345,9 @@ describe('estadisticas/+page.svelte', () => {
 			render(EstadisticasPage);
 
 			await waitFor(() => {
-				// Total: 8h, Media: 8h (ambos son 8h 0m)
+				// Total: 8h, Media: 8h (ambos son 8h en formato corto)
 				const totalLabel = screen.getByText('Total horas');
-				expect(totalLabel.parentElement?.textContent).toMatch(/8h 0m/);
+				expect(totalLabel.parentElement?.textContent).toMatch(/8h/);
 			});
 		});
 
@@ -361,7 +361,7 @@ describe('estadisticas/+page.svelte', () => {
 			await waitFor(() => {
 				// Media diaria = 8h / 1 día = 8h
 				const mediaLabel = screen.getByText('Media diaria');
-				expect(mediaLabel.parentElement?.textContent).toMatch(/8h 0m/);
+				expect(mediaLabel.parentElement?.textContent).toMatch(/8h/);
 			});
 		});
 
@@ -437,10 +437,10 @@ describe('estadisticas/+page.svelte', () => {
 			await waitFor(() => {
 				// Total: 8h (4h + 4h), pero en 1 día
 				const totalLabel = screen.getByText('Total horas');
-				expect(totalLabel.parentElement?.textContent).toMatch(/8h 0m/);
+				expect(totalLabel.parentElement?.textContent).toMatch(/8h/);
 				// Media: 8h / 1 día = 8h
 				const mediaLabel = screen.getByText('Media diaria');
-				expect(mediaLabel.parentElement?.textContent).toMatch(/8h 0m/);
+				expect(mediaLabel.parentElement?.textContent).toMatch(/8h/);
 				// Días trabajados: 1, jornadas: 2
 				const jornadasLabel = screen.getByText('Jornadas');
 				expect(jornadasLabel.parentElement?.textContent).toMatch(/2/);
@@ -502,10 +502,10 @@ describe('estadisticas/+page.svelte', () => {
 			await waitFor(() => {
 				// Solo la jornada cerrada debe contar
 				const totalLabel = screen.getByText('Total horas');
-				expect(totalLabel.parentElement?.textContent).toMatch(/8h 0m/); // Total: solo la cerrada
+				expect(totalLabel.parentElement?.textContent).toMatch(/8h/); // Total: solo la cerrada
 				// Media: 8h / 1 día = 8h
 				const mediaLabel = screen.getByText('Media diaria');
-				expect(mediaLabel.parentElement?.textContent).toMatch(/8h 0m/);
+				expect(mediaLabel.parentElement?.textContent).toMatch(/8h/);
 				// 1 jornada visible (la cerrada)
 				const jornadasLabel = screen.getByText('Jornadas');
 				expect(jornadasLabel.parentElement?.textContent).toMatch(/1/);
@@ -548,10 +548,10 @@ describe('estadisticas/+page.svelte', () => {
 
 			await waitFor(() => {
 				// Total: 12h (8 + 4)
-				expect(screen.getByText('12h 0m')).toBeInTheDocument();
+				expect(screen.getByText('12h')).toBeInTheDocument();
 				// Media: 6h/día (12h / 2 días)
 				const mediaLabel = screen.getByText('Media diaria');
-				expect(mediaLabel.parentElement?.textContent).toMatch(/6h 0m/);
+				expect(mediaLabel.parentElement?.textContent).toMatch(/6h/);
 				// Días trabajados: 2
 				const diasLabel = screen.getByText('Días trabajados');
 				expect(diasLabel.parentElement?.textContent).toMatch(/2/);

@@ -10,7 +10,7 @@
 	import {
 		filtrarPorPeriodo,
 		calcularResumenPeriodo,
-		formatearHorasDecimal,
+		formatearHorasCorto,
 		formatearFechaLarga,
 		prepararDatosGrafica
 	} from '$lib/utils/dashboard';
@@ -36,17 +36,17 @@
 
 	function balanceTexto(min: number): string {
 		const signo = min > 0 ? '+' : min < 0 ? '−' : '';
-		return signo + formatearHorasDecimal(Math.abs(min) / 60);
+		return signo + formatearHorasCorto(Math.abs(min) / 60);
 	}
 
-	let cajaExceso = $derived(
+	let cajaBalance = $derived(
 		resumen.balanceMinutos > 0
 			? 'border border-success/30 bg-success/10'
 			: resumen.balanceMinutos < 0
 				? 'border border-warning/30 bg-warning/10'
 				: 'bg-surface-light'
 	);
-	let textoExceso = $derived(
+	let textoBalance = $derived(
 		resumen.balanceMinutos > 0
 			? 'text-success'
 			: resumen.balanceMinutos < 0
@@ -108,22 +108,22 @@
 
 		{#if jornadasFiltradas.length > 0}
 			<div class="mt-6 grid grid-cols-3 gap-4">
-				<div class="row-span-2 flex flex-col justify-center rounded-xl p-4 {cajaExceso}">
-					<p class="text-sm text-text-muted">Exceso</p>
-					<p class="text-2xl font-bold {textoExceso}">{balanceTexto(resumen.balanceMinutos)}</p>
+				<div class="row-span-2 flex flex-col justify-center rounded-xl p-4 {cajaBalance}">
+					<p class="text-sm text-text-muted">Balance</p>
+					<p class="text-4xl font-bold {textoBalance}">{balanceTexto(resumen.balanceMinutos)}</p>
 				</div>
 				<div class="rounded-xl bg-surface-light p-4">
 					<p class="text-sm text-text-muted">Total horas</p>
-					<p class="text-xl font-bold text-text">{formatearHorasDecimal(resumen.totalHoras)}</p>
+					<p class="text-xl font-bold text-text">{formatearHorasCorto(resumen.totalHoras)}</p>
 					{#if resumen.totalHorasReal !== resumen.totalHoras}
 						<p class="text-xs text-text-muted">
-							Real: {formatearHorasDecimal(resumen.totalHorasReal)}
+							Real: {formatearHorasCorto(resumen.totalHorasReal)}
 						</p>
 					{/if}
 				</div>
 				<div class="rounded-xl bg-surface-light p-4">
 					<p class="text-sm text-text-muted">Media diaria</p>
-					<p class="text-xl font-bold text-text">{formatearHorasDecimal(resumen.mediaDiaria)}</p>
+					<p class="text-xl font-bold text-text">{formatearHorasCorto(resumen.mediaDiaria)}</p>
 				</div>
 				<div class="rounded-xl bg-surface-light p-4">
 					<p class="text-sm text-text-muted">Días trabajados</p>

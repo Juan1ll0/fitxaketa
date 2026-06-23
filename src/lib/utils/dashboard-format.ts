@@ -44,6 +44,12 @@ export function formatearHorasDecimal(horas: number): string {
 	return `${h}h ${m}m`;
 }
 
+export function formatearHorasCorto(horas: number): string {
+	const redondeado = Math.round(horas * 10) / 10;
+	if (Number.isInteger(redondeado)) return `${redondeado}h`;
+	return `${redondeado.toFixed(1).replace('.', ',')}h`;
+}
+
 export function etiquetaEjeX(periodo: string, fecha: Date = new Date()): string {
 	const formatter = new Intl.DateTimeFormat('es-ES', { month: 'long' });
 	const mes = formatter
