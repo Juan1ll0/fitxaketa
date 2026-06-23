@@ -1,9 +1,10 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
-	import type { Chart, TooltipItem } from 'chart.js';
+	import type { Chart, TooltipItem, Plugin } from 'chart.js';
 	import type { Periodo } from '$lib/stores/app-state';
 	import type { DatosGrafica } from '$lib/utils/dashboard';
 	import { formatearHora, etiquetaEjeX } from '$lib/utils/dashboard';
+	import { dibujarLineaObjetivo, balanceTooltipTexto } from '$lib/utils/stats-chart';
 
 	let { datos, periodo }: { datos: DatosGrafica; periodo: Periodo } = $props();
 
@@ -13,6 +14,23 @@
 	let isDestroyed = false;
 
 	let etiquetaX = $derived(etiquetaEjeX(periodo));
+
+	const COLOR_OBJETIVO = '#ef4444';
+
+	/** Línea de objetivo diario escalonada (un segmento por día). Solo semana/mes. */
+	const objetivoPlugin: Plugin<'bar'> = {
+		id: 'objetivoDiario',
+		afterDraw(c) {
+			const objetivos = chartDatos.objetivoDiarioPorLabel;
+			if (periodo === 'año' || !objetivos?.length) return;
+			dibujarLineaObjetivo(c, objetivos, COLOR_OBJETIVO);
+		}
+	};
+
+	function balanceTooltip(idx: number): string {
+		if (periodo === 'año') return '';
+		return balanceTooltipTexto(chartDatos.balancePorLabel?.[idx]);
+	}
 
 	function tooltipCallbacks() {
 		return {
@@ -47,7 +65,9 @@
 				const h = Math.floor(dur);
 				const m = Math.round((dur - h) * 60);
 				return ` ${item.dataset.label}: ${h}h ${m}m`;
-			}
+			},
+			afterBody: (items: TooltipItem<'bar'>[]) =>
+				items.length ? balanceTooltip(items[0].dataIndex) : ''
 		};
 	}
 
@@ -55,6 +75,7 @@
 		chartDatos = datos;
 		chart = new ChartCls(canvas, {
 			type: 'bar',
+			plugins: [objetivoPlugin],
 			data: {
 				labels: datos.labels,
 				datasets: datos.datasets.map((ds) => ({

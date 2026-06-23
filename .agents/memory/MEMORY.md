@@ -1,5 +1,15 @@
 # MEMORY.md — Decisiones Técnicas
 
+## 2026-06-22 — Feature 003.5: Configuración (decisiones arquitectónicas, plan aprobado)
+
+> Registradas tras validación del architect (`APPROVED_WITH_CHANGES`) sobre `specs/features/003.5-configuracion.plan.md`.
+
+1. **Modelo `settings` append-only (Dexie v4):** cada cambio de configuración = un snapshot completo fechado; nunca `update`/`delete`. Acceso temporal vía `settingsActual` / `settingsVigente(fecha)` / `historicoCampo(campo)` en `src/lib/utils/settings.ts` (puras, operan sobre el array de snapshots en memoria del store). Seed por defecto en primer arranque con `fecha` temprana (p. ej. 2000-01-01) y contrato neutro (objetivo 0) para que `settingsVigente` nunca quede vacío.
+2. **Cálculo al vuelo, nada por jornada:** duración efectiva (redondeo), balance/exceso y objetivo diario se derivan de `jornadas + histórico de settings` en cada render; no se persiste duración/exceso por jornada. El histórico de settings da la fidelidad temporal (cada día usa su snapshot vigente por `start_time`).
+3. **Línea de objetivo del gráfico = plugin inline `afterDraw`** (mismo patrón que `fitxaketaDataLabels`), **nunca `chartjs-plugin-annotation`** (bundle budget). Decisión vinculante para futuras gráficas. La línea es **escalonada** (un valor por día/categoría del eje X) para que un cambio de contrato se vea como escalón.
+4. **Token `--color-warning` (#f59e0b, ámbar)** a añadir en `src/app.css` (`:root` + `@theme`) para balance negativo/déficit. Caja "Exceso": `--color-success` si >0, `--color-warning` si <0, fondo normal si =0. El color nunca como único indicador (acompañado de signo `+/−`).
+5. **`import type` desde `db.ts` en `src/lib/utils/`:** hoy `type { Jornada } from '$lib/db'` ya convive con la regla `utils-son-puras` de dependency-cruiser sin romperla (depcruise no sigue imports type-only). Se asume lo mismo para `Settings`, pero es **verificación obligatoria** con `npm run depcruise`; fallback si rompe: mover `Jornada`/`Settings` a `src/lib/db-types.ts` y reexportar desde `db.ts`.
+
 ## 2026-06-20 — Feature 006: Testing Infrastructure
 
 ### Stack de testing elegido

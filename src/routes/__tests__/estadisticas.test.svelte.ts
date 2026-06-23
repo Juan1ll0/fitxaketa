@@ -15,11 +15,13 @@ import EstadisticasPage from '../../routes/estadisticas/+page.svelte';
 const mocks = vi.hoisted(() => {
 	const mockSubscribe = vi.fn();
 	const mockGetJornadas = vi.fn<() => Jornada[]>().mockReturnValue([] as Jornada[]);
+	const mockGetSettings = vi.fn<() => unknown[]>().mockReturnValue([]);
 	const mockCargarJornadas = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
 
 	return {
 		mockSubscribe,
 		mockGetJornadas,
+		mockGetSettings,
 		mockCargarJornadas
 	};
 });
@@ -27,6 +29,7 @@ const mocks = vi.hoisted(() => {
 vi.mock('$lib/stores/app-state', () => ({
 	subscribe: mocks.mockSubscribe,
 	getJornadas: mocks.mockGetJornadas,
+	getSettings: mocks.mockGetSettings,
 	cargarJornadas: mocks.mockCargarJornadas
 }));
 
@@ -279,11 +282,11 @@ describe('estadisticas/+page.svelte', () => {
 	describe('cambiar periodo actualiza la gráfica y los datos', () => {
 		it('al cambiar a "Semana" se muestran datos de la semana', async () => {
 			subscribeConCallbackInmediato();
-			const hace3dias = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+			const dentroSemana = new Date(Date.now()); // hoy: siempre dentro de la semana actual
 			const hace10dias = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000);
-			// Una jornada hace 3 días (dentro de semana) y otra hace 10 días (fuera de semana)
+			// Una jornada de hoy (dentro de semana) y otra hace 10 días (fuera de semana)
 			mocks.mockGetJornadas.mockReturnValue([
-				jornadaCerrada(1, hace3dias, 480),
+				jornadaCerrada(1, dentroSemana, 480),
 				jornadaCerrada(2, hace10dias, 480)
 			]);
 
@@ -342,9 +345,9 @@ describe('estadisticas/+page.svelte', () => {
 			render(EstadisticasPage);
 
 			await waitFor(() => {
-				// Total: 8h, Media: 8h (ambos son 8h 0m)
+				// Total: 8h, Media: 8h (ambos son 8h en formato corto)
 				const totalLabel = screen.getByText('Total horas');
-				expect(totalLabel.parentElement?.textContent).toMatch(/8h 0m/);
+				expect(totalLabel.parentElement?.textContent).toMatch(/8h/);
 			});
 		});
 
@@ -358,7 +361,7 @@ describe('estadisticas/+page.svelte', () => {
 			await waitFor(() => {
 				// Media diaria = 8h / 1 día = 8h
 				const mediaLabel = screen.getByText('Media diaria');
-				expect(mediaLabel.parentElement?.textContent).toMatch(/8h 0m/);
+				expect(mediaLabel.parentElement?.textContent).toMatch(/8h/);
 			});
 		});
 
@@ -434,10 +437,10 @@ describe('estadisticas/+page.svelte', () => {
 			await waitFor(() => {
 				// Total: 8h (4h + 4h), pero en 1 día
 				const totalLabel = screen.getByText('Total horas');
-				expect(totalLabel.parentElement?.textContent).toMatch(/8h 0m/);
+				expect(totalLabel.parentElement?.textContent).toMatch(/8h/);
 				// Media: 8h / 1 día = 8h
 				const mediaLabel = screen.getByText('Media diaria');
-				expect(mediaLabel.parentElement?.textContent).toMatch(/8h 0m/);
+				expect(mediaLabel.parentElement?.textContent).toMatch(/8h/);
 				// Días trabajados: 1, jornadas: 2
 				const jornadasLabel = screen.getByText('Jornadas');
 				expect(jornadasLabel.parentElement?.textContent).toMatch(/2/);
@@ -499,10 +502,10 @@ describe('estadisticas/+page.svelte', () => {
 			await waitFor(() => {
 				// Solo la jornada cerrada debe contar
 				const totalLabel = screen.getByText('Total horas');
-				expect(totalLabel.parentElement?.textContent).toMatch(/8h 0m/); // Total: solo la cerrada
+				expect(totalLabel.parentElement?.textContent).toMatch(/8h/); // Total: solo la cerrada
 				// Media: 8h / 1 día = 8h
 				const mediaLabel = screen.getByText('Media diaria');
-				expect(mediaLabel.parentElement?.textContent).toMatch(/8h 0m/);
+				expect(mediaLabel.parentElement?.textContent).toMatch(/8h/);
 				// 1 jornada visible (la cerrada)
 				const jornadasLabel = screen.getByText('Jornadas');
 				expect(jornadasLabel.parentElement?.textContent).toMatch(/1/);
@@ -545,10 +548,10 @@ describe('estadisticas/+page.svelte', () => {
 
 			await waitFor(() => {
 				// Total: 12h (8 + 4)
-				expect(screen.getByText('12h 0m')).toBeInTheDocument();
+				expect(screen.getByText('12h')).toBeInTheDocument();
 				// Media: 6h/día (12h / 2 días)
 				const mediaLabel = screen.getByText('Media diaria');
-				expect(mediaLabel.parentElement?.textContent).toMatch(/6h 0m/);
+				expect(mediaLabel.parentElement?.textContent).toMatch(/6h/);
 				// Días trabajados: 2
 				const diasLabel = screen.getByText('Días trabajados');
 				expect(diasLabel.parentElement?.textContent).toMatch(/2/);

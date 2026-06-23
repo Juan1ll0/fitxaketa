@@ -7,8 +7,25 @@ import {
 	stopJornada,
 	subscribe,
 	getClockedIn,
-	getElapsed
+	getElapsed,
+	cargarJornadas,
+	getJornadasHoy
 } from '$lib/stores/app-state';
+
+/** Inserta una jornada cerrada con start/end explícitos en la BD. */
+async function addJornadaCerrada(start: Date, end: Date): Promise<number> {
+	return await db.jornadas.add({
+		start_time: start,
+		end_time: end,
+		lat_start: null,
+		lng_start: null,
+		lat_end: null,
+		lng_end: null,
+		duration: Math.round((end.getTime() - start.getTime()) / 60000),
+		status: 'closed',
+		synced: 1
+	});
+}
 
 describe('app-state store', () => {
 	// Limpiar estado del store entre tests
@@ -294,6 +311,40 @@ describe('app-state store', () => {
 
 			expect(listener1).toHaveBeenCalled();
 			expect(listener2).toHaveBeenCalled();
+		});
+	});
+
+	describe('calcularHoy() — atribución por fecha de inicio (regla 1)', () => {
+		/** Fija una hora del día de hoy. */
+		function hoyA(hora: number, minutos = 0): Date {
+			const d = new Date();
+			d.setHours(hora, minutos, 0, 0);
+			return d;
+		}
+
+		it('incluye una jornada iniciada hoy en jornadasHoy', async () => {
+			const id = await addJornadaCerrada(hoyA(9), hoyA(13));
+			await cargarJornadas();
+			expect(getJornadasHoy().some((j) => j.id === id)).toBe(true);
+		});
+
+		it('incluye una jornada que empieza hoy 23:00 y termina mañana 01:00 (cuenta hoy)', async () => {
+			const start = hoyA(23);
+			const end = new Date(start);
+			end.setDate(end.getDate() + 1);
+			end.setHours(1, 0, 0, 0);
+			const id = await addJornadaCerrada(start, end);
+			await cargarJornadas();
+			expect(getJornadasHoy().some((j) => j.id === id)).toBe(true);
+		});
+
+		it('excluye una jornada que empezó ayer 23:00 y terminó hoy 01:00 (cuenta ayer)', async () => {
+			const start = hoyA(23);
+			start.setDate(start.getDate() - 1);
+			const end = hoyA(1);
+			const id = await addJornadaCerrada(start, end);
+			await cargarJornadas();
+			expect(getJornadasHoy().some((j) => j.id === id)).toBe(false);
 		});
 	});
 

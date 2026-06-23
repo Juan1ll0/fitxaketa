@@ -7,6 +7,8 @@
 	--color-danger-dark: #dc2626;
 	--color-success: #22c55e;
 	--color-success-dark: #16a34a;
+	--color-warning: #f59e0b;
+	--color-warning-dark: #d97706;
 	--color-surface: #0f172a;
 	--color-surface-light: #1e293b;
 	--color-border: #334155;
@@ -21,6 +23,8 @@
 	--color-danger-dark: var(--color-danger-dark);
 	--color-success: var(--color-success);
 	--color-success-dark: var(--color-success-dark);
+	--color-warning: var(--color-warning);
+	--color-warning-dark: var(--color-warning-dark);
 	--color-surface: var(--color-surface);
 	--color-surface-light: var(--color-surface-light);
 	--color-border: var(--color-border);

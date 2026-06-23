@@ -9,6 +9,7 @@ import {
 	filtrarPorPeriodo,
 	calcularResumenPeriodo,
 	formatearHorasDecimal,
+	formatearHorasCorto,
 	prepararDatosGrafica
 } from '$lib/utils/dashboard';
 import type { Jornada } from '$lib/db';
@@ -759,6 +760,35 @@ describe('dashboard utils', () => {
 
 		it('maneja valores grandes: 100.5 → "100h 30m"', () => {
 			expect(formatearHorasDecimal(100.5)).toBe('100h 30m');
+		});
+	});
+
+	// ─────────────────────────────────────────────────────────────
+	// formatearHorasCorto()
+	// ─────────────────────────────────────────────────────────────
+	describe('formatearHorasCorto()', () => {
+		it('hora entera sin decimal: 8.0 → "8h"', () => {
+			expect(formatearHorasCorto(8)).toBe('8h');
+		});
+
+		it('0 → "0h"', () => {
+			expect(formatearHorasCorto(0)).toBe('0h');
+		});
+
+		it('decimal con coma: 106.25 → "106,3h"', () => {
+			expect(formatearHorasCorto(106.25)).toBe('106,3h');
+		});
+
+		it('decimal exacto: 167.5 → "167,5h"', () => {
+			expect(formatearHorasCorto(167.5)).toBe('167,5h');
+		});
+
+		it('redondea a 1 decimal: 8.749 → "8,7h"', () => {
+			expect(formatearHorasCorto(8.749)).toBe('8,7h');
+		});
+
+		it('valores grandes: 178.33 → "178,3h"', () => {
+			expect(formatearHorasCorto(178.33)).toBe('178,3h');
 		});
 	});
 
