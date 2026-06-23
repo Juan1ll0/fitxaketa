@@ -122,11 +122,9 @@ describe('estadisticas/+page.svelte', () => {
 			render(EstadisticasPage);
 
 			await waitFor(() => {
-				const botones = screen.getAllByRole('button');
-				expect(botones).toHaveLength(3);
-				expect(screen.getByText('Semana')).toBeInTheDocument();
-				expect(screen.getByText('Mes')).toBeInTheDocument();
-				expect(screen.getByText('Año')).toBeInTheDocument();
+				expect(screen.getByRole('button', { name: 'Semana' })).toBeInTheDocument();
+				expect(screen.getByRole('button', { name: 'Mes' })).toBeInTheDocument();
+				expect(screen.getByRole('button', { name: 'Año' })).toBeInTheDocument();
 			});
 		});
 	});
@@ -282,11 +280,14 @@ describe('estadisticas/+page.svelte', () => {
 	describe('cambiar periodo actualiza la gráfica y los datos', () => {
 		it('al cambiar a "Semana" se muestran datos de la semana', async () => {
 			subscribeConCallbackInmediato();
-			const dentroSemana = new Date(Date.now()); // hoy: siempre dentro de la semana actual
-			const hace10dias = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000);
-			// Una jornada de hoy (dentro de semana) y otra hace 10 días (fuera de semana)
+			const hoy = new Date();
+			// Al pasar Mes → Semana la referencia se sitúa en el punto medio del mes (día 15).
+			const diaPuntoMedio = new Date(hoy.getFullYear(), hoy.getMonth(), 15);
+			const hace10dias = new Date(hoy.getTime() - 10 * 24 * 60 * 60 * 1000);
+			// Una jornada en el punto medio del mes (dentro de la semana resultante)
+			// y otra hace 10 días (fuera de esa semana).
 			mocks.mockGetJornadas.mockReturnValue([
-				jornadaCerrada(1, dentroSemana, 480),
+				jornadaCerrada(1, diaPuntoMedio, 480),
 				jornadaCerrada(2, hace10dias, 480)
 			]);
 

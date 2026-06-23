@@ -1,7 +1,7 @@
 import type { Jornada, Settings } from '$lib/db';
 import type { Periodo } from '$lib/stores/app-state';
 import type { DatosGrafica } from '$lib/utils/dashboard-types';
-import { obtenerRangoPeriodo } from '$lib/utils/dashboard-periodo';
+import { obtenerRangoPeriodo } from '$lib/utils/dashboard-navegacion';
 import { inicioDia, claveDia, diaDeJornada } from '$lib/utils/fecha-negocio';
 import { duracionEfectivaMinutos } from '$lib/utils/redondeo';
 import { settingsActual } from '$lib/utils/settings';
@@ -36,8 +36,13 @@ function etiquetaDia(fecha: Date, periodo: Periodo): string {
 	return `${day}/${month}`;
 }
 
-function datosStacked(jornadas: Jornada[], periodo: Periodo, snapshots: Settings[]): DatosGrafica {
-	const hoy = inicioDia(new Date(Date.now()));
+function datosStacked(
+	jornadas: Jornada[],
+	periodo: Periodo,
+	snapshots: Settings[],
+	fechaRef: Date
+): DatosGrafica {
+	const hoy = inicioDia(fechaRef);
 	const primerDia = settingsActual(snapshots).primer_dia_semana;
 	const { inicio, fin } = obtenerRangoPeriodo(periodo, hoy, primerDia);
 
@@ -109,7 +114,8 @@ function datosPorMes(jornadas: Jornada[], snapshots: Settings[]): DatosGrafica {
 export function prepararDatosGrafica(
 	jornadas: Jornada[],
 	periodo: Periodo,
-	snapshots: Settings[] = []
+	snapshots: Settings[] = [],
+	fechaRef: Date = new Date(Date.now())
 ): DatosGrafica {
 	switch (periodo) {
 		case 'año':
@@ -117,6 +123,6 @@ export function prepararDatosGrafica(
 		case 'semana':
 		case 'mes':
 		case 'trimestre':
-			return datosStacked(jornadas, periodo, snapshots);
+			return datosStacked(jornadas, periodo, snapshots, fechaRef);
 	}
 }
