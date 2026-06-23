@@ -26,11 +26,16 @@ const NOMBRES_MES_CORTO = [
 ];
 
 const COLOR_PRIMARIO = '#3b82f6';
+const COLOR_DOMINGO = '#ef4444';
+const COLOR_NORMAL = '#94a3b8';
+
+const DIAS_SEMANA_CORTO = ['D', 'L', 'M', 'X', 'J', 'V', 'S'];
 
 function etiquetaDia(fecha: Date, periodo: Periodo): string {
 	const day = String(fecha.getDate()).padStart(2, '0');
 	if (periodo === 'mes' || periodo === 'semana') {
-		return day;
+		const diaSemana = DIAS_SEMANA_CORTO[fecha.getDay()];
+		return `${diaSemana}-${day}`;
 	}
 	const month = String(fecha.getMonth() + 1).padStart(2, '0');
 	return `${day}/${month}`;
@@ -69,6 +74,10 @@ function datosStacked(
 	}
 
 	const labels = diasUnicos.map((key) => etiquetasDia.get(key) ?? '');
+	const labelColors = diasUnicos.map((key) => {
+		const fecha = fechasPorDia.get(key);
+		return fecha?.getDay() === 0 ? COLOR_DOMINGO : COLOR_NORMAL;
+	});
 	const datasets = construirDatasetsApilados(diasUnicos, jornadasPorDia, snapshots);
 
 	const { objetivoDiarioPorLabel, balancePorLabel } = objetivoYBalancePorLabel(
@@ -78,7 +87,7 @@ function datosStacked(
 		snapshots
 	);
 
-	return { labels, datasets, objetivoDiarioPorLabel, balancePorLabel };
+	return { labels, labelColors, datasets, objetivoDiarioPorLabel, balancePorLabel };
 }
 
 function datosPorMes(jornadas: Jornada[], snapshots: Settings[]): DatosGrafica {
