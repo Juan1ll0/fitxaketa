@@ -1,10 +1,14 @@
 <script lang="ts">
-	import type { Jornada } from '$lib/db';
+	import type { Jornada, Settings } from '$lib/db';
 	import { formatearHora, formatearDuracion } from '$lib/utils/dashboard';
+	import { duracionEfectivaMinutos } from '$lib/utils/redondeo';
 
-	let { jornada }: { jornada: Jornada } = $props();
+	let { jornada, snapshots }: { jornada: Jornada; snapshots: Settings[] } = $props();
 
 	const esAbierta = $derived(jornada.status === 'open');
+	const duracion = $derived(
+		esAbierta ? 'En curso' : formatearDuracion(duracionEfectivaMinutos(jornada, snapshots))
+	);
 </script>
 
 <div class="flex items-center justify-between border-b border-surface-light px-4 py-3">
@@ -19,15 +23,15 @@
 	</div>
 
 	<div class="flex items-center gap-3">
-		<span class="font-mono text-sm text-text">
-			{esAbierta ? 'En curso' : formatearDuracion(jornada.duration)}
-		</span>
 		<span
-			class="text-lg"
-			title={jornada.synced ? 'Sincronizado' : 'No sincronizado'}
-			aria-label={jornada.synced ? 'Sincronizado' : 'No sincronizado'}
+			class="rounded-full px-2.5 py-0.5 text-xs font-medium {esAbierta
+				? 'bg-success/20 text-success'
+				: 'bg-surface-light text-text-muted'}"
 		>
-			{jornada.synced ? '✅' : '❌'}
+			{esAbierta ? 'Abierto' : 'Cerrado'}
+		</span>
+		<span class="font-mono text-sm text-text">
+			{duracion}
 		</span>
 	</div>
 </div>
