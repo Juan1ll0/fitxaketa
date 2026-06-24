@@ -1,3 +1,4 @@
+import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import adapter from '@sveltejs/adapter-auto';
 import { sveltekit } from '@sveltejs/kit/vite';
@@ -5,8 +6,18 @@ import tailwindcss from '@tailwindcss/vite';
 import { SvelteKitPWA } from '@vite-pwa/sveltekit';
 import { defineConfig } from 'vite';
 
+// HTTPS local opcional (mkcert) para probar la PWA en dispositivos físicos (iOS exige
+// contexto seguro para service worker / instalación). Solo se activa si existen los
+// certs en certs/ (gitignored); sin ellos, dev/preview siguen sirviendo por http.
+const https =
+	existsSync('certs/dev-key.pem') && existsSync('certs/dev.pem')
+		? { key: readFileSync('certs/dev-key.pem'), cert: readFileSync('certs/dev.pem') }
+		: undefined;
+
 export default defineConfig({
 	server: {
+		host: true,
+		https,
 		fs: {
 			// Permite servir el node_modules compartido al correr desde un git
 			// worktree (.claude/worktrees/*): el runtime de SvelteKit vive en la
@@ -14,6 +25,7 @@ export default defineConfig({
 			allow: [fileURLToPath(new URL('../../../', import.meta.url))]
 		}
 	},
+	preview: { host: true, https },
 	plugins: [
 		tailwindcss(),
 		sveltekit({
