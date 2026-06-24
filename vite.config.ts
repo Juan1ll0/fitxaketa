@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url';
 import adapter from '@sveltejs/adapter-auto';
 import { sveltekit } from '@sveltejs/kit/vite';
 import tailwindcss from '@tailwindcss/vite';
@@ -5,6 +6,14 @@ import { SvelteKitPWA } from '@vite-pwa/sveltekit';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
+	server: {
+		fs: {
+			// Permite servir el node_modules compartido al correr desde un git
+			// worktree (.claude/worktrees/*): el runtime de SvelteKit vive en la
+			// raíz del repo y queda fuera del allow-list por defecto de Vite.
+			allow: [fileURLToPath(new URL('../../../', import.meta.url))]
+		}
+	},
 	plugins: [
 		tailwindcss(),
 		sveltekit({
