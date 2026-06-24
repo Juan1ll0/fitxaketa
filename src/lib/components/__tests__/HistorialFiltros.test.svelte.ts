@@ -1,8 +1,8 @@
 /**
  * Tests para HistorialFiltros.svelte
  *
- * Verifica el renderizado, cambio de modo (periodo/fecha/rango),
- * filtro de estado y botón exportar.
+ * Verifica el control temporal siempre visible (periodo/fecha/rango), el panel
+ * colapsable de filtros secundarios (modo + estado) y el chip resumen de estado.
  *
  * ACs cubiertos: AC-03, AC-07, AC-08, AC-09, AC-10, AC-11, AC-13, AC-14, AC-24, AC-25
  */
@@ -21,9 +21,13 @@ function defaultProps() {
 			periodo: 'mes' as const,
 			fechaReferencia: new Date(2026, 5, 23)
 		},
-		filtroEstado: 'todas' as FiltroEstado,
-		onExportar: vi.fn()
+		filtroEstado: 'cerradas' as FiltroEstado
 	};
+}
+
+/** Abre el panel de filtros secundarios (modo + estado). */
+async function abrirPanel(): Promise<void> {
+	await fireEvent.click(screen.getByRole('button', { name: /Filtros/ }));
 }
 
 /** Convierte Date a YYYY-MM-DD para comparar con valores de input. */
@@ -48,7 +52,7 @@ describe('HistorialFiltros.svelte', () => {
 	// ─── Renderizado básico ─────────────────────────────────────────────────
 
 	describe('renderizado por defecto (modo periodo) AC-03, AC-24', () => {
-		it('muestra PeriodoNavegacion con botones Semana/Mes/Año', () => {
+		it('muestra PeriodoNavegacion con botones Semana/Mes/Año (siempre visible)', () => {
 			render(HistorialFiltros, { props: defaultProps() });
 
 			expect(screen.getByRole('button', { name: 'Semana' })).toBeInTheDocument();
@@ -56,37 +60,58 @@ describe('HistorialFiltros.svelte', () => {
 			expect(screen.getByRole('button', { name: 'Año' })).toBeInTheDocument();
 		});
 
-		it('muestra botón Exportar (AC-25)', () => {
-			const props = defaultProps();
-			render(HistorialFiltros, { props });
-			expect(screen.getByRole('button', { name: 'Exportar' })).toBeInTheDocument();
+		it('muestra el botón "Filtros" para desplegar los filtros secundarios', () => {
+			render(HistorialFiltros, { props: defaultProps() });
+			expect(screen.getByRole('button', { name: /Filtros/ })).toBeInTheDocument();
 		});
 
-		it('muestra los tres botones de estado (Todas/Abiertas/Cerradas) (AC-14)', () => {
+		it('los filtros secundarios (modo/estado) están colapsados por defecto', () => {
 			render(HistorialFiltros, { props: defaultProps() });
+			expect(screen.queryByRole('button', { name: 'Periodo' })).not.toBeInTheDocument();
+			expect(screen.queryByRole('button', { name: 'Todas' })).not.toBeInTheDocument();
+		});
+
+		it('al abrir el panel muestra los tres botones de estado (Todas/Abiertas/Cerradas) (AC-14)', async () => {
+			render(HistorialFiltros, { props: defaultProps() });
+			await abrirPanel();
 			expect(screen.getByRole('button', { name: 'Todas' })).toBeInTheDocument();
 			expect(screen.getByRole('button', { name: 'Abiertas' })).toBeInTheDocument();
 			expect(screen.getByRole('button', { name: 'Cerradas' })).toBeInTheDocument();
 		});
 
-		it('el botón Todas está activo por defecto (bg-primary)', () => {
+		it('el botón del estado por defecto (Cerradas) está activo (bg-primary)', async () => {
 			render(HistorialFiltros, { props: defaultProps() });
-			const btn = screen.getByRole('button', { name: 'Todas' });
+			await abrirPanel();
+			const btn = screen.getByRole('button', { name: 'Cerradas' });
 			expect(btn).toHaveClass('bg-primary');
 		});
 
-		it('los botones Abiertas y Cerradas no están activos initially', () => {
+		it('los botones Todas y Abiertas no están activos inicialmente', async () => {
 			render(HistorialFiltros, { props: defaultProps() });
+			await abrirPanel();
+			expect(screen.getByRole('button', { name: 'Todas' })).not.toHaveClass('bg-primary');
 			expect(screen.getByRole('button', { name: 'Abiertas' })).not.toHaveClass('bg-primary');
-			expect(screen.getByRole('button', { name: 'Cerradas' })).not.toHaveClass('bg-primary');
+		});
+	});
+
+	// ─── Chip resumen de estado ──────────────────────────────────────────────
+
+	describe('chip resumen de estado', () => {
+		it('con el panel cerrado muestra el estado activo como chip resumen', () => {
+			render(HistorialFiltros, { props: defaultProps() });
+			// "Cerradas" aparece como chip aunque el panel esté cerrado
+			expect(screen.getByText('Cerradas')).toBeInTheDocument();
+			// pero no como botón (el botón está dentro del panel colapsado)
+			expect(screen.queryByRole('button', { name: 'Cerradas' })).not.toBeInTheDocument();
 		});
 	});
 
 	// ─── Cambio de modo (Periodo/Fecha/Rango) AC-09, AC-13 ───────────────
 
 	describe('cambio de modo (AC-09, AC-13)', () => {
-		it('muestra los tres botones de modo (Periodo/Fecha/Rango)', () => {
+		it('al abrir el panel muestra los tres botones de modo (Periodo/Fecha/Rango)', async () => {
 			render(HistorialFiltros, { props: defaultProps() });
+			await abrirPanel();
 			expect(screen.getByRole('button', { name: 'Periodo' })).toBeInTheDocument();
 			expect(screen.getByRole('button', { name: 'Fecha' })).toBeInTheDocument();
 			expect(screen.getByRole('button', { name: 'Rango' })).toBeInTheDocument();
@@ -94,6 +119,7 @@ describe('HistorialFiltros.svelte', () => {
 
 		it('al hacer clic en "Fecha" aparece el input de fecha y desaparece PeriodoNavegacion', async () => {
 			render(HistorialFiltros, { props: defaultProps() });
+			await abrirPanel();
 
 			// PeriodoNavegacion visible inicialmente
 			expect(screen.getByRole('button', { name: 'Semana' })).toBeInTheDocument();
@@ -108,6 +134,7 @@ describe('HistorialFiltros.svelte', () => {
 
 		it('al hacer clic en "Rango" aparecen los inputs Desde/Hasta y desaparece PeriodoNavegacion', async () => {
 			render(HistorialFiltros, { props: defaultProps() });
+			await abrirPanel();
 
 			await fireEvent.click(screen.getByRole('button', { name: 'Rango' }));
 
@@ -118,6 +145,7 @@ describe('HistorialFiltros.svelte', () => {
 
 		it('al hacer clic en "Periodo" vuelve PeriodoNavegacion y desaparecen los otros', async () => {
 			render(HistorialFiltros, { props: defaultProps() });
+			await abrirPanel();
 
 			// Ir a Fecha
 			await fireEvent.click(screen.getByRole('button', { name: 'Fecha' }));
@@ -135,6 +163,7 @@ describe('HistorialFiltros.svelte', () => {
 	describe('modo fecha (AC-07, AC-08)', () => {
 		it('input date tiene type="date" y max establecido', async () => {
 			render(HistorialFiltros, { props: defaultProps() });
+			await abrirPanel();
 
 			await fireEvent.click(screen.getByRole('button', { name: 'Fecha' }));
 
@@ -145,6 +174,7 @@ describe('HistorialFiltros.svelte', () => {
 
 		it('al seleccionar una fecha el valor del input cambia', async () => {
 			render(HistorialFiltros, { props: defaultProps() });
+			await abrirPanel();
 
 			await fireEvent.click(screen.getByRole('button', { name: 'Fecha' }));
 
@@ -160,6 +190,7 @@ describe('HistorialFiltros.svelte', () => {
 	describe('modo rango (AC-10, AC-11)', () => {
 		it('los inputs Desde y Hasta tienen type="date" y max establecido', async () => {
 			render(HistorialFiltros, { props: defaultProps() });
+			await abrirPanel();
 
 			await fireEvent.click(screen.getByRole('button', { name: 'Rango' }));
 
@@ -174,6 +205,7 @@ describe('HistorialFiltros.svelte', () => {
 
 		it('los inputs tienen max igual a hoy', async () => {
 			render(HistorialFiltros, { props: defaultProps() });
+			await abrirPanel();
 
 			await fireEvent.click(screen.getByRole('button', { name: 'Rango' }));
 
@@ -191,6 +223,7 @@ describe('HistorialFiltros.svelte', () => {
 	describe('botón Limpiar (AC-09, AC-13)', () => {
 		it('el botón Limpiar aparece en modo fecha', async () => {
 			render(HistorialFiltros, { props: defaultProps() });
+			await abrirPanel();
 
 			await fireEvent.click(screen.getByRole('button', { name: 'Fecha' }));
 			expect(screen.getByRole('button', { name: 'Limpiar' })).toBeInTheDocument();
@@ -198,6 +231,7 @@ describe('HistorialFiltros.svelte', () => {
 
 		it('el botón Limpiar aparece en modo rango', async () => {
 			render(HistorialFiltros, { props: defaultProps() });
+			await abrirPanel();
 
 			await fireEvent.click(screen.getByRole('button', { name: 'Rango' }));
 			expect(screen.getByRole('button', { name: 'Limpiar' })).toBeInTheDocument();
@@ -210,6 +244,7 @@ describe('HistorialFiltros.svelte', () => {
 
 		it('al hacer clic en Limpiar desde modo fecha vuelve a mostrar PeriodoNavegacion', async () => {
 			render(HistorialFiltros, { props: defaultProps() });
+			await abrirPanel();
 
 			await fireEvent.click(screen.getByRole('button', { name: 'Fecha' }));
 			expect(screen.getByLabelText('Fecha')).toBeInTheDocument();
@@ -221,6 +256,7 @@ describe('HistorialFiltros.svelte', () => {
 
 		it('al hacer clic en Limpiar desde modo rango vuelve a mostrar PeriodoNavegacion', async () => {
 			render(HistorialFiltros, { props: defaultProps() });
+			await abrirPanel();
 
 			await fireEvent.click(screen.getByRole('button', { name: 'Rango' }));
 			expect(screen.getByLabelText('Desde')).toBeInTheDocument();
@@ -235,6 +271,7 @@ describe('HistorialFiltros.svelte', () => {
 	describe('conmutador de estado (AC-14)', () => {
 		it('al hacer clic en "Abiertas" este botón se activa con bg-primary', async () => {
 			render(HistorialFiltros, { props: defaultProps() });
+			await abrirPanel();
 
 			const abiertasBtn = screen.getByRole('button', { name: 'Abiertas' });
 			await fireEvent.click(abiertasBtn);
@@ -242,25 +279,28 @@ describe('HistorialFiltros.svelte', () => {
 			expect(abiertasBtn).toHaveClass('bg-primary');
 		});
 
-		it('al hacer clic en "Abiertas" el botón Todas pierde bg-primary', async () => {
+		it('al hacer clic en "Abiertas" el botón Cerradas pierde bg-primary', async () => {
 			render(HistorialFiltros, { props: defaultProps() });
+			await abrirPanel();
 
 			await fireEvent.click(screen.getByRole('button', { name: 'Abiertas' }));
 
-			expect(screen.getByRole('button', { name: 'Todas' })).not.toHaveClass('bg-primary');
+			expect(screen.getByRole('button', { name: 'Cerradas' })).not.toHaveClass('bg-primary');
 		});
 
-		it('al hacer clic en "Cerradas" este botón se activa con bg-primary', async () => {
+		it('al hacer clic en "Todas" este botón se activa con bg-primary', async () => {
 			render(HistorialFiltros, { props: defaultProps() });
+			await abrirPanel();
 
-			const cerradasBtn = screen.getByRole('button', { name: 'Cerradas' });
-			await fireEvent.click(cerradasBtn);
+			const todasBtn = screen.getByRole('button', { name: 'Todas' });
+			await fireEvent.click(todasBtn);
 
-			expect(cerradasBtn).toHaveClass('bg-primary');
+			expect(todasBtn).toHaveClass('bg-primary');
 		});
 
 		it('al hacer clic en "Todas" después de Abiertas, Todas vuelve a estar activa', async () => {
 			render(HistorialFiltros, { props: defaultProps() });
+			await abrirPanel();
 
 			// Cambiar a Abiertas
 			await fireEvent.click(screen.getByRole('button', { name: 'Abiertas' }));
@@ -273,25 +313,28 @@ describe('HistorialFiltros.svelte', () => {
 		});
 	});
 
-	// ─── Exportar AC-25 ──────────────────────────────────────────────────
+	// ─── Panel colapsable ─────────────────────────────────────────────────
 
-	describe('botón Exportar (AC-25)', () => {
-		it('al hacer clic en Exportar se invoca onExportar', async () => {
-			const props = defaultProps();
-			render(HistorialFiltros, { props });
+	describe('panel colapsable de filtros', () => {
+		it('al volver a hacer clic en "Filtros" el panel se colapsa (aria-expanded false)', async () => {
+			render(HistorialFiltros, { props: defaultProps() });
+			const toggle = screen.getByRole('button', { name: /Filtros/ });
 
-			await fireEvent.click(screen.getByRole('button', { name: 'Exportar' }));
-			expect(props.onExportar).toHaveBeenCalledTimes(1);
+			await fireEvent.click(toggle);
+			expect(toggle).toHaveAttribute('aria-expanded', 'true');
+
+			await fireEvent.click(toggle);
+			expect(toggle).toHaveAttribute('aria-expanded', 'false');
 		});
 
-		it('onExportar se invoca solo una vez aunque hagamos clic varias veces', async () => {
-			const props = defaultProps();
-			render(HistorialFiltros, { props });
+		it('el botón Filtros refleja el estado expandido con aria-expanded', async () => {
+			render(HistorialFiltros, { props: defaultProps() });
 
-			await fireEvent.click(screen.getByRole('button', { name: 'Exportar' }));
-			await fireEvent.click(screen.getByRole('button', { name: 'Exportar' }));
-			await fireEvent.click(screen.getByRole('button', { name: 'Exportar' }));
-			expect(props.onExportar).toHaveBeenCalledTimes(3);
+			const toggle = screen.getByRole('button', { name: /Filtros/ });
+			expect(toggle).toHaveAttribute('aria-expanded', 'false');
+
+			await fireEvent.click(toggle);
+			expect(toggle).toHaveAttribute('aria-expanded', 'true');
 		});
 	});
 });

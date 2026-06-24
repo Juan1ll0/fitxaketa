@@ -17,7 +17,7 @@
 		periodo: 'mes',
 		fechaReferencia: new Date()
 	});
-	let filtroEstado = $state<FiltroEstado>('todas');
+	let filtroEstado = $state<FiltroEstado>('cerradas');
 	let mostrarAvisoExport = $state(false);
 
 	let primerDia = $derived(settingsActual(settings).primer_dia_semana);
@@ -35,7 +35,7 @@
 
 	afterNavigate(async () => {
 		filtroTemporal = { tipo: 'periodo', periodo: 'mes', fechaReferencia: new Date() };
-		filtroEstado = 'todas';
+		filtroEstado = 'cerradas';
 		await cargarJornadas();
 	});
 
@@ -52,15 +52,33 @@
 
 <div class="min-h-screen bg-surface px-4 py-4">
 	<div class="mx-auto max-w-lg">
-		<h1 class="text-2xl font-bold text-text">Historial</h1>
+		<div class="flex items-center justify-between gap-2">
+			<h1 class="text-2xl font-bold text-text">Historial</h1>
+			<button
+				type="button"
+				onclick={handleExportar}
+				class="flex min-h-11 items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-text transition-colors hover:bg-surface-light"
+			>
+				<svg
+					class="h-4 w-4"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					aria-hidden="true"
+				>
+					<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+					<polyline points="7 10 12 15 17 10" />
+					<line x1="12" y1="15" x2="12" y2="3" />
+				</svg>
+				Exportar
+			</button>
+		</div>
 
 		<div class="mt-4">
-			<HistorialFiltros
-				bind:filtroTemporal
-				bind:filtroEstado
-				{primerDia}
-				onExportar={handleExportar}
-			/>
+			<HistorialFiltros bind:filtroTemporal bind:filtroEstado {primerDia} />
 			{#if mostrarAvisoExport}
 				<p
 					class="mt-2 rounded-lg bg-primary/10 px-4 py-2 text-sm text-primary"
