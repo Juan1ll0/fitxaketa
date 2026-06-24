@@ -285,16 +285,16 @@ describe('dashboard utils', () => {
 	});
 
 	describe('formatearDuracion()', () => {
-		it('formatea minutos como HH:MM:SS', () => {
-			expect(formatearDuracion(125)).toBe('02:05:00');
+		it('formatea minutos como HH:MM', () => {
+			expect(formatearDuracion(125)).toBe('02:05');
 		});
 
-		it('formatea 0 minutos como 00:00:00', () => {
-			expect(formatearDuracion(0)).toBe('00:00:00');
+		it('formatea 0 minutos como 00:00', () => {
+			expect(formatearDuracion(0)).toBe('00:00');
 		});
 
-		it('formatea 60 minutos como 01:00:00', () => {
-			expect(formatearDuracion(60)).toBe('01:00:00');
+		it('formatea 60 minutos como 01:00', () => {
+			expect(formatearDuracion(60)).toBe('01:00');
 		});
 
 		it('retorna "En curso" para null', () => {

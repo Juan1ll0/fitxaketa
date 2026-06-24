@@ -37,7 +37,7 @@ export function formatearDuracion(minutos: number | null): string {
 	if (minutos === null) return 'En curso';
 	const h = Math.floor(minutos / 60);
 	const m = minutos % 60;
-	return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`;
+	return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
 export function formatearHorasDecimal(horas: number): string {

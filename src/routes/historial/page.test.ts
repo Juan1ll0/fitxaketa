@@ -1,18 +1,17 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/svelte';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, fireEvent, cleanup } from '@testing-library/svelte';
 import { tick } from 'svelte';
-import type { Jornada } from '$lib/db';
+import type { Jornada, Settings } from '$lib/db';
 
-// Mocks con vi.hoisted() para asegurar que se crean antes del hoisting de vi.mock
 const mocks = vi.hoisted(() => ({
 	subscribe: vi.fn((callback: () => void) => {
-		callback(); // Llama inmediatamente como el store real
+		callback();
 		return () => {};
 	}),
 	getJornadas: vi.fn(() => [] as Jornada[]),
+	getSettings: vi.fn(() => [] as Settings[]),
 	cargarJornadas: vi.fn().mockResolvedValue(undefined),
 	afterNavigate: vi.fn((callback: () => void | Promise<void>) => {
-		// Simula la navegación llamando al callback inmediatamente
 		callback();
 	})
 }));
@@ -20,6 +19,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('$lib/stores/app-state', () => ({
 	subscribe: mocks.subscribe,
 	getJornadas: mocks.getJornadas,
+	getSettings: mocks.getSettings,
 	cargarJornadas: mocks.cargarJornadas
 }));
 
@@ -27,7 +27,6 @@ vi.mock('$app/navigation', () => ({
 	afterNavigate: mocks.afterNavigate
 }));
 
-// Importar Page DESPUÉS de definir los mocks
 import Page from './+page.svelte';
 
 function crearJornada(override: Partial<Jornada> = {}): Jornada {
@@ -36,12 +35,14 @@ function crearJornada(override: Partial<Jornada> = {}): Jornada {
 		start_time: new Date(),
 		end_time: new Date(),
 		duration: 60,
-		synced: 1,
+		synced: false,
 		status: 'closed',
 		lat_start: null,
 		lng_start: null,
 		lat_end: null,
 		lng_end: null,
+		created_at: new Date(),
+		updated_at: new Date(),
 		...override
 	};
 }
@@ -50,6 +51,7 @@ describe('Historial Page', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		mocks.getJornadas.mockReturnValue([]);
+		mocks.getSettings.mockReturnValue([]);
 		mocks.cargarJornadas.mockResolvedValue(undefined);
 	});
 
@@ -57,35 +59,34 @@ describe('Historial Page', () => {
 		cleanup();
 	});
 
-	it('muestra estado de carga inicialmente', async () => {
-		mocks.cargarJornadas.mockImplementation(
-			() => new Promise(() => {}) as unknown as Promise<void>
-		);
-
+	it('muestra título "Historial"', async () => {
 		render(Page);
-
-		expect(screen.getByText('Cargando...')).toBeInTheDocument();
+		await tick();
+		expect(screen.getByText('Historial')).toBeInTheDocument();
 	});
 
 	it('muestra estado vacío cuando no hay jornadas', async () => {
 		mocks.getJornadas.mockReturnValue([]);
-		mocks.cargarJornadas.mockResolvedValue(undefined);
-
 		render(Page);
 		await tick();
-
 		await screen.findByText('Aún no hay fichajes registrados');
 	});
 
 	it('muestra botón "Fichar ahora" en estado vacío y enlaza a /', async () => {
 		mocks.getJornadas.mockReturnValue([]);
-		mocks.cargarJornadas.mockResolvedValue(undefined);
-
 		render(Page);
 		await tick();
-
 		const boton = await screen.findByText('Fichar ahora');
 		expect(boton).toHaveAttribute('href', '/');
+	});
+
+	it('muestra mensaje de filtro cuando hay jornadas pero no coinciden', async () => {
+		const haceUnMes = new Date();
+		haceUnMes.setMonth(haceUnMes.getMonth() - 1);
+		mocks.getJornadas.mockReturnValue([crearJornada({ id: 1, start_time: haceUnMes })]);
+		render(Page);
+		await tick();
+		await screen.findByText('No hay fichajes para este filtro');
 	});
 
 	it('muestra jornadas agrupadas por día ("Hoy", "Ayer")', async () => {
@@ -94,31 +95,78 @@ describe('Historial Page', () => {
 		ayer.setDate(ayer.getDate() - 1);
 
 		mocks.getJornadas.mockReturnValue([
-			crearJornada({ id: 1, start_time: hoy, synced: 1, status: 'closed' }),
-			crearJornada({ id: 2, start_time: ayer, synced: 0, status: 'closed' })
+			crearJornada({ id: 1, start_time: hoy, status: 'closed' }),
+			crearJornada({ id: 2, start_time: ayer, status: 'closed' })
 		]);
-		mocks.cargarJornadas.mockResolvedValue(undefined);
-
 		render(Page);
 		await tick();
 
-		await screen.findByText('Hoy');
-		await screen.findByText('Ayer');
+		const hoyHeaders = await screen.findAllByText('Hoy');
+		expect(hoyHeaders.length).toBeGreaterThan(0);
+		const ayerHeaders = await screen.findAllByText('Ayer');
+		expect(ayerHeaders.length).toBeGreaterThan(0);
 	});
 
-	it('muestra icono de sync correcto (synced=1 → title "Sincronizado")', async () => {
+	it('no muestra icono de sync ✅/❌', async () => {
 		const hoy = new Date();
-
-		mocks.getJornadas.mockReturnValue([
-			crearJornada({ id: 1, start_time: hoy, synced: 1, status: 'closed' }),
-			crearJornada({ id: 2, start_time: hoy, synced: 0, status: 'closed' })
-		]);
-		mocks.cargarJornadas.mockResolvedValue(undefined);
-
+		mocks.getJornadas.mockReturnValue([crearJornada({ id: 1, start_time: hoy, status: 'closed' })]);
 		render(Page);
 		await tick();
 
-		await screen.findByTitle('Sincronizado');
-		await screen.findByTitle('No sincronizado');
+		await tick();
+		expect(screen.queryByText('✅')).not.toBeInTheDocument();
+		expect(screen.queryByText('❌')).not.toBeInTheDocument();
+	});
+
+	it('muestra badge de estado "Cerrado" al expandir', async () => {
+		const hoy = new Date();
+		mocks.getJornadas.mockReturnValue([
+			crearJornada({ id: 1, start_time: hoy, status: 'closed' })
+		]);
+		render(Page);
+		await tick();
+
+		const buttons = screen.getAllByRole('button', { expanded: false });
+		const header = buttons.find(b => b.getAttribute('aria-controls')?.startsWith('dia-'));
+		if (header) {
+			await fireEvent.click(header);
+			await tick();
+		}
+
+		await screen.findByText('Cerrado');
+	});
+
+	it('los grupos de día están colapsados por defecto', async () => {
+		const hoy = new Date();
+		mocks.getJornadas.mockReturnValue([crearJornada({ id: 1, start_time: hoy, status: 'closed' })]);
+		render(Page);
+		await tick();
+
+		// Buscar el botón con aria-controls que empieza con "dia-" (cabecera del grupo)
+		const buttons = await screen.findAllByRole('button');
+		const diaButton = buttons.find(b => b.getAttribute('aria-controls')?.startsWith('dia-'));
+		expect(diaButton).toBeDefined();
+		expect(diaButton).toHaveAttribute('aria-expanded', 'false');
+	});
+
+	it('al expandir un día se ven las jornadas', async () => {
+		const hoy = new Date();
+		mocks.getJornadas.mockReturnValue([crearJornada({ id: 1, start_time: hoy, status: 'closed' })]);
+		render(Page);
+		await tick();
+
+		const buttons = screen.getAllByRole('button', { expanded: false });
+		const header = buttons.find(b => b.getAttribute('aria-controls')?.startsWith('dia-'));
+		if (header) {
+			await fireEvent.click(header);
+			await tick();
+			expect(header).toHaveAttribute('aria-expanded', 'true');
+		}
+	});
+
+	it('muestra botón Exportar', async () => {
+		render(Page);
+		await tick();
+		expect(screen.getByText('Exportar')).toBeInTheDocument();
 	});
 });
