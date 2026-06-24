@@ -53,34 +53,6 @@ export function formatearHorasCorto(horas: number): string {
 	return `${redondeado.toFixed(1).replace('.', ',')}h`;
 }
 
-export function etiquetaEjeX(periodo: string, fecha: Date = new Date()): string {
-	const formatter = new Intl.DateTimeFormat('es-ES', { month: 'long' });
-	const mes = formatter
-		.formatToParts(fecha)
-		.map((part) =>
-			part.type === 'month'
-				? `${part.value.charAt(0).toUpperCase()}${part.value.slice(1)}`
-				: part.value
-		)
-		.join('');
-
-	switch (periodo) {
-		case 'semana': {
-			const diaDelMes = fecha.getDate();
-			const semanaDelMes = Math.ceil(diaDelMes / 7);
-			return `Semana ${semanaDelMes} del mes de ${mes}`;
-		}
-		case 'mes': {
-			return `Mes de ${mes}`;
-		}
-		case 'año': {
-			return `Año ${fecha.getFullYear()}`;
-		}
-		default:
-			return '';
-	}
-}
-
 function capitalizar(texto: string): string {
 	return `${texto.charAt(0).toUpperCase()}${texto.slice(1)}`;
 }

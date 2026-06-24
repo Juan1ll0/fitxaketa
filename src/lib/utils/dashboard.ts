@@ -6,8 +6,7 @@ export {
 	formatearDuracion,
 	formatearHorasDecimal,
 	formatearHorasCorto,
-	formatearIndicadorPeriodo,
-	etiquetaEjeX
+	formatearIndicadorPeriodo
 } from '$lib/utils/dashboard-format';
 export {
 	calcularResumenDia,
