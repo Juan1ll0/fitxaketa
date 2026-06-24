@@ -1,7 +1,7 @@
 ---
 description: Implementa componentes Svelte 5 (runes), rutas SvelteKit y lógica frontend TypeScript.
 mode: subagent
-model: opencode-go/kimi-k2.7-code
+model: opencode-go/minimax-m3
 color: '#FF3E00'
 temperature: 0.2
 ---

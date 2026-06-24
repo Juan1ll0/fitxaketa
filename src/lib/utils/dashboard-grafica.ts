@@ -126,12 +126,6 @@ export function prepararDatosGrafica(
 	snapshots: Settings[] = [],
 	fechaRef: Date = new Date(Date.now())
 ): DatosGrafica {
-	switch (periodo) {
-		case 'año':
-			return datosPorMes(jornadas, snapshots);
-		case 'semana':
-		case 'mes':
-		case 'trimestre':
-			return datosStacked(jornadas, periodo, snapshots, fechaRef);
-	}
+	if (periodo === 'año') return datosPorMes(jornadas, snapshots);
+	return datosStacked(jornadas, periodo, snapshots, fechaRef);
 }

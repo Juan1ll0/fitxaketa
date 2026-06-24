@@ -37,7 +37,7 @@ export function formatearDuracion(minutos: number | null): string {
 	if (minutos === null) return 'En curso';
 	const h = Math.floor(minutos / 60);
 	const m = minutos % 60;
-	return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`;
+	return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
 export function formatearHorasDecimal(horas: number): string {
@@ -51,34 +51,6 @@ export function formatearHorasCorto(horas: number): string {
 	const redondeado = Math.round(horas * 10) / 10;
 	if (Number.isInteger(redondeado)) return `${redondeado}h`;
 	return `${redondeado.toFixed(1).replace('.', ',')}h`;
-}
-
-export function etiquetaEjeX(periodo: string, fecha: Date = new Date()): string {
-	const formatter = new Intl.DateTimeFormat('es-ES', { month: 'long' });
-	const mes = formatter
-		.formatToParts(fecha)
-		.map((part) =>
-			part.type === 'month'
-				? `${part.value.charAt(0).toUpperCase()}${part.value.slice(1)}`
-				: part.value
-		)
-		.join('');
-
-	switch (periodo) {
-		case 'semana': {
-			const diaDelMes = fecha.getDate();
-			const semanaDelMes = Math.ceil(diaDelMes / 7);
-			return `Semana ${semanaDelMes} del mes de ${mes}`;
-		}
-		case 'mes': {
-			return `Mes de ${mes}`;
-		}
-		case 'año': {
-			return `Año ${fecha.getFullYear()}`;
-		}
-		default:
-			return '';
-	}
 }
 
 function capitalizar(texto: string): string {
