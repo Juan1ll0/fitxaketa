@@ -12,6 +12,9 @@ node_modules
 .DS_Store
 Thumbs.db
 
+# Certs locales (mkcert) para pruebas HTTPS en dispositivos físicos
+/certs
+
 # Env
 .env
 .env.*
