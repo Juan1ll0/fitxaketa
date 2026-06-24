@@ -18,6 +18,7 @@
 		fechaReferencia: new Date()
 	});
 	let filtroEstado = $state<FiltroEstado>('todas');
+	let mostrarAvisoExport = $state(false);
 
 	let primerDia = $derived(settingsActual(settings).primer_dia_semana);
 	let jornadasTemporal = $derived(aplicarFiltroTemporal(jornadas, filtroTemporal, primerDia));
@@ -40,7 +41,8 @@
 
 	function handleExportar(): void {
 		exportarJornadas(jornadasFiltradas);
-		// TODO: mostrar aviso "Próximamente" (T4.3)
+		mostrarAvisoExport = true;
+		setTimeout(() => (mostrarAvisoExport = false), 3000);
 	}
 </script>
 
@@ -59,6 +61,15 @@
 				{primerDia}
 				onExportar={handleExportar}
 			/>
+			{#if mostrarAvisoExport}
+				<p
+					class="mt-2 rounded-lg bg-primary/10 px-4 py-2 text-sm text-primary"
+					role="status"
+					aria-live="polite"
+				>
+					Exportación próximamente disponible
+				</p>
+			{/if}
 		</div>
 
 		{#if jornadas.length === 0}
