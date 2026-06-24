@@ -118,14 +118,12 @@ describe('Historial Page', () => {
 
 	it('muestra badge de estado "Cerrado" al expandir', async () => {
 		const hoy = new Date();
-		mocks.getJornadas.mockReturnValue([
-			crearJornada({ id: 1, start_time: hoy, status: 'closed' })
-		]);
+		mocks.getJornadas.mockReturnValue([crearJornada({ id: 1, start_time: hoy, status: 'closed' })]);
 		render(Page);
 		await tick();
 
 		const buttons = screen.getAllByRole('button', { expanded: false });
-		const header = buttons.find(b => b.getAttribute('aria-controls')?.startsWith('dia-'));
+		const header = buttons.find((b) => b.getAttribute('aria-controls')?.startsWith('dia-'));
 		if (header) {
 			await fireEvent.click(header);
 			await tick();
@@ -142,7 +140,7 @@ describe('Historial Page', () => {
 
 		// Buscar el botón con aria-controls que empieza con "dia-" (cabecera del grupo)
 		const buttons = await screen.findAllByRole('button');
-		const diaButton = buttons.find(b => b.getAttribute('aria-controls')?.startsWith('dia-'));
+		const diaButton = buttons.find((b) => b.getAttribute('aria-controls')?.startsWith('dia-'));
 		expect(diaButton).toBeDefined();
 		expect(diaButton).toHaveAttribute('aria-expanded', 'false');
 	});
@@ -154,7 +152,7 @@ describe('Historial Page', () => {
 		await tick();
 
 		const buttons = screen.getAllByRole('button', { expanded: false });
-		const header = buttons.find(b => b.getAttribute('aria-controls')?.startsWith('dia-'));
+		const header = buttons.find((b) => b.getAttribute('aria-controls')?.startsWith('dia-'));
 		if (header) {
 			await fireEvent.click(header);
 			await tick();
