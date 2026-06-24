@@ -136,12 +136,10 @@ Getters públicos (desde `.svelte.ts`):
 
 Sistema de suscripción: `subscribe(fn)` devuelve `unsubscribe()`, `notificarCambio()` invoca a todos los listeners. Usado para compatibilidad con tests y componentes que no usan runes directamente.
 
-### Rutas placeholder
+### Rutas implementadas
 
-- `src/routes/historial/+page.svelte` — Título "Historial" + "Próximamente"
-- `src/routes/estadisticas/+page.svelte` — Título "Estadísticas" + "Próximamente"
-
-Ambas listas para ser implementadas en sub-specs 003.3 y 003.4 respectivamente.
+- `src/routes/historial/+page.svelte` — Implementado (003.7): filtros temporales (periodo/fecha/rango), filtro por estado (todas/abiertas/cerradas), días colapsables con resumen de horas, JornadaCard con duración efectiva redondeada y badge de estado (sin icono sync), botón Exportar (placeholder).
+- `src/routes/estadisticas/+page.svelte` — Implementado (003.4 + 003.6): gráfica Chart.js, resumen del periodo, paginación temporal (PeriodoNavegacion con semana/mes/año).
 
 ### Knip configurado para SvelteKit
 
