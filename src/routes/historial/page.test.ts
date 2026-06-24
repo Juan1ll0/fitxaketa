@@ -35,14 +35,12 @@ function crearJornada(override: Partial<Jornada> = {}): Jornada {
 		start_time: new Date(),
 		end_time: new Date(),
 		duration: 60,
-		synced: false,
+		synced: 0,
 		status: 'closed',
 		lat_start: null,
 		lng_start: null,
 		lat_end: null,
 		lng_end: null,
-		created_at: new Date(),
-		updated_at: new Date(),
 		...override
 	};
 }

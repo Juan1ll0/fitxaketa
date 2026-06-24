@@ -870,8 +870,8 @@ describe('dashboard utils', () => {
 				const datos = prepararDatosGrafica(jornadas, 'semana');
 
 				expect(datos.labels).toHaveLength(7); // 7 días de la semana
-				expect(datos.labels[0]).toBe('15'); // Lunes
-				expect(datos.labels[6]).toBe('21'); // Domingo
+expect(datos.labels[0]).toBe('L-15'); // Lunes 15
+			expect(datos.labels[6]).toBe('D-21'); // Domingo 21
 				expect(datos.datasets).toHaveLength(2); // Max 2 jornadas en un día
 				expect(datos.datasets[0].label).toBe('Jornada 1');
 				expect(datos.datasets[0].backgroundColor).toBe('#3b82f6');

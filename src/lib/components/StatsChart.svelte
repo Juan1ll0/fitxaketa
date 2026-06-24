@@ -3,7 +3,7 @@
 	import type { Chart, TooltipItem, Plugin } from 'chart.js';
 	import type { Periodo } from '$lib/stores/app-state';
 	import type { DatosGrafica } from '$lib/utils/dashboard';
-	import { formatearHora, etiquetaEjeX } from '$lib/utils/dashboard';
+	import { formatearHora } from '$lib/utils/dashboard';
 	import { dibujarLineaObjetivo, balanceTooltipTexto } from '$lib/utils/stats-chart';
 
 	let { datos, periodo }: { datos: DatosGrafica; periodo: Periodo } = $props();
@@ -12,8 +12,6 @@
 	let chart = $state<Chart | null>(null);
 	let chartDatos: DatosGrafica = $state({ labels: [], datasets: [] });
 	let isDestroyed = false;
-
-	let etiquetaX = $derived(etiquetaEjeX(periodo));
 
 	const COLOR_NORMAL = '#94a3b8';
 
