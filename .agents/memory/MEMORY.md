@@ -1,5 +1,17 @@
 # MEMORY.md — Decisiones Técnicas
 
+## 2026-06-23 — Feature 003.6: Paginación temporal en estadísticas (decisiones de implementación)
+
+> Registradas por `@pm` durante el close-feature. La implementación sigue el plan con dos desviaciones justificadas.
+
+1. **Funciones de navegación extraídas a `dashboard-navegacion.ts`** (fichero nuevo, puro) en vez de ampliar `dashboard-periodo.ts` como decía el plan T2.1. Motivo: el Riesgo #1 del plan anticipaba que `dashboard-periodo.ts` superaría 120 líneas al añadir 4 funciones. La extracción mantiene ambos ficheros ≤ 120 líneas y respeta dependency-cruiser (`utils/` pura, sin UI). El barrel `dashboard.ts` reexporta las 3 funciones nuevas (`navegarPeriodo`, `esPeriodoActual`, `obtenerPuntoMedioPeriodo`) + `obtenerRangoPeriodo`.
+2. **`prepararDatosGrafica` modificada para aceptar `fechaRef`** (desviación del plan, que decía "dashboard-grafica.ts no se toca"). El plan asumía que la gráfica era reactiva a `jornadasFiltradas`, pero `datosStacked` construye el eje X iterando el rango del periodo con `obtenerRangoPeriodo(periodo, hoy)`. Sin `fechaRef`, al navegar a un periodo pasado el eje X mostraría los días del periodo actual con datos del pasado → etiquetas incorrectas. El parámetro `fechaRef` (por defecto `new Date(Date.now())`, retrocompatible) hace que AC-15 funcione correctamente. La página pasa `fechaReferencia` al `$derived` de `datosGrafica`.
+3. **Guard anti-futuro en `cambiarPeriodo`**: al pasar de vista larga→corta (Año→Mes, Mes→Semana), si el punto medio calculado cae en el futuro (p. ej. Año 2026 actual → 1 julio, siendo hoy anterior a julio), se usa `hoy` en su lugar. Esto evita navegar a un periodo futuro vía el punto medio, reforzando AC-18/19/20. No estaba en el plan T3.1; es una mejora defensiva.
+4. **Componente `PeriodoNavegacion.svelte` con `$bindable()`**: `periodo` y `fechaReferencia` son props bindable, de modo que `+page.svelte` usa `bind:periodo` y `bind:fechaReferencia`. El estado vive en la página (donde se necesita para los `$derived` de filtrado/gráfica/resumen), el componente solo renderiza y delega la mutación. Sin callback `onPeriodoChange` (el contrato preliminar T1.1 quedó superseded por T3.1).
+5. **Indicador de periodo como `<button>` clickeable (AC-14)**: el texto del periodo (centro de la barra) es un botón que llama `irAHoy()` al click, con `cursor-pointer hover:underline` cuando no es el periodo actual y `cursor-default` cuando sí. Se deshabilita (`disabled` + `aria-disabled`) en el periodo actual. Además existe un chip "Hoy" separado. Ambos caminos cumplen AC-09/AC-14.
+6. **Reset al entrar al tab (AC-24)** vía `afterNavigate` (ya existente en la página): resetea `fechaReferencia = new Date()` y `periodo = 'mes'` en cada navegación a la página. Cubre tanto la primera entrada como re-entradas.
+7. **`aria-live="polite"` del plan T3.1 NO implementado** en el indicador. El indicador es un `<button>` (no una live region); `aria-live` sobre un botón es inusual. svelte-check con `--fail-on-warnings` pasa (G3 verde), por lo que la a11y se considera suficiente. Refinamiento menor pendiente si se quiere anuncio explícito al screen reader.
+
 ## 2026-06-22 — Feature 003.5: Configuración (decisiones arquitectónicas, plan aprobado)
 
 > Registradas tras validación del architect (`APPROVED_WITH_CHANGES`) sobre `specs/features/003.5-configuracion.plan.md`.
