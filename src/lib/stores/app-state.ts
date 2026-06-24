@@ -1,17 +1,16 @@
 import {
 	db,
 	createJornada,
+	crearJornadaManual,
 	closeJornada,
 	getOpenJornada,
 	getAllJornadas,
-	addSettingsSnapshot,
-	getAllSettings,
-	seedSettingsIfEmpty,
 	type Jornada,
 	type Settings
 } from '$lib/db';
+import { addSettingsSnapshot, getAllSettings, seedSettingsIfEmpty } from '$lib/db-settings';
 import { calcularHoy } from '$lib/utils/dashboard';
-import { settingsActual } from '$lib/utils/settings';
+import { settingsVigente } from '$lib/utils/settings';
 import { appState, notificarCambio, type Periodo } from './app-state.svelte';
 import { tick, startTimer, stopTimer } from './app-timer';
 
@@ -84,8 +83,22 @@ export async function startJornada(coords?: Coords): Promise<void> {
 	await cargarJornadas();
 }
 
+/**
+ * Alta manual de una jornada cerrada (spec 003.8). `start`/`end` ya validados
+ * por el llamante (modal). Refresca el estado para que el resumen de hoy y la
+ * lista se actualicen reactivamente sin recargar.
+ */
+export async function agregarJornadaManual(start: Date, end: Date): Promise<void> {
+	await crearJornadaManual(start, end);
+	await cargarJornadas();
+}
+
 function minJornadaMinutos(): number {
-	return appState.settings.length ? settingsActual(appState.settings).min_jornada_minutos : 0;
+	if (!appState.settings.length) return 0;
+	// Mínimo vigente al INICIO de la jornada: el contrato con el que se arrancó
+	// manda, aunque se cambie la configuración mientras está abierta.
+	const inicio = appState.startTime ?? new Date();
+	return settingsVigente(appState.settings, inicio).min_jornada_minutos;
 }
 
 async function descartarJornada(id: number): Promise<void> {
