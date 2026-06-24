@@ -6,6 +6,7 @@ export {
 	formatearDuracion,
 	formatearHorasDecimal,
 	formatearHorasCorto,
+	formatearIndicadorPeriodo,
 	etiquetaEjeX
 } from '$lib/utils/dashboard-format';
 export {
@@ -15,4 +16,9 @@ export {
 	calcularResumenPeriodo
 } from '$lib/utils/dashboard-calc';
 export { filtrarPorPeriodo } from '$lib/utils/dashboard-periodo';
+export {
+	navegarPeriodo,
+	esPeriodoActual,
+	obtenerPuntoMedioPeriodo
+} from '$lib/utils/dashboard-navegacion';
 export { prepararDatosGrafica } from '$lib/utils/dashboard-grafica';
