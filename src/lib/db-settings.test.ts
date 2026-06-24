@@ -1,12 +1,7 @@
 import 'fake-indexeddb/auto';
 import { describe, it, expect, beforeEach } from 'vitest';
-import {
-	db,
-	addSettingsSnapshot,
-	getAllSettings,
-	seedSettingsIfEmpty,
-	type Settings
-} from '$lib/db';
+import { db, type Settings } from '$lib/db';
+import { addSettingsSnapshot, getAllSettings, seedSettingsIfEmpty } from '$lib/db-settings';
 
 function input(fecha: Date): Omit<Settings, 'id'> {
 	return {

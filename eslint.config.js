@@ -9,6 +9,7 @@ export default ts.config(
 		ignores: [
 			'node_modules/',
 			'.svelte-kit/',
+			'.claude/',
 			'build/',
 			'dist/',
 			'dev-dist/',

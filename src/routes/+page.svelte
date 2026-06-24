@@ -6,51 +6,54 @@
 		subscribe,
 		getClockedIn,
 		getElapsed,
+		getJornadas,
 		getJornadasHoy,
-		getResumenHoy
+		getSettings
 	} from '$lib/stores/app-state';
-	import { formatearFecha, type ResumenDia } from '$lib/utils/dashboard';
-	import type { Jornada } from '$lib/db';
+	import { settingsActual } from '$lib/utils/settings';
+	import { jornadaAbiertaAnterior } from '$lib/utils/dashboard-avisos';
+	import { dashboardLayoutPorDefecto } from '$lib/utils/dashboard-layout';
+	import type { Jornada, Settings } from '$lib/db';
+	import CabeceraFechaHora from '$lib/components/dashboard/CabeceraFechaHora.svelte';
+	import CronometroCard from '$lib/components/dashboard/CronometroCard.svelte';
+	import EstadoPill from '$lib/components/dashboard/EstadoPill.svelte';
+	import ResumenStatCards from '$lib/components/dashboard/ResumenStatCards.svelte';
+	import AvisoJornadaAbierta from '$lib/components/dashboard/AvisoJornadaAbierta.svelte';
+	import AltaManualModal from '$lib/components/AltaManualModal.svelte';
 
 	let clockedIn = $state(false);
 	let elapsed = $state('00:00:00');
-	let hoy = $state('');
+	let ahora = $state(new Date());
+	let jornadas = $state<Jornada[]>([]);
 	let jornadasHoy = $state<Jornada[]>([]);
-	let resumen = $state<ResumenDia>({ totalHoras: 0, totalJornadas: 0 });
+	let settings = $state<Settings[]>([]);
+	let modalAbierta = $state(false);
+
+	const minJornada = $derived(settings.length ? settingsActual(settings).min_jornada_minutos : 0);
+	const avisoAnterior = $derived(jornadaAbiertaAnterior(jornadas, ahora));
 
 	let unsubscribe: (() => void) | null = null;
-	let fechaInterval: ReturnType<typeof setInterval> | null = null;
+	let reloj: ReturnType<typeof setInterval> | null = null;
 
 	onMount(() => {
-		// initAppState lo dispara el layout (común a todas las rutas).
-		hoy = formatearFecha(new Date());
-
 		unsubscribe = subscribe(() => {
 			clockedIn = getClockedIn();
 			elapsed = getElapsed();
+			jornadas = getJornadas();
 			jornadasHoy = getJornadasHoy();
-			resumen = getResumenHoy();
+			settings = getSettings();
 		});
-
-		fechaInterval = setInterval(() => {
-			const nuevaFecha = formatearFecha(new Date());
-			if (nuevaFecha !== hoy) {
-				hoy = nuevaFecha;
-			}
-		}, 60000);
+		reloj = setInterval(() => (ahora = new Date()), 1000);
 	});
 
 	onDestroy(() => {
 		if (unsubscribe) unsubscribe();
-		if (fechaInterval) clearInterval(fechaInterval);
+		if (reloj) clearInterval(reloj);
 	});
 
 	async function handleFichar() {
-		if (clockedIn) {
-			await stopJornada();
-		} else {
-			await startJornada();
-		}
+		if (clockedIn) await stopJornada();
+		else await startJornada();
 	}
 </script>
 
@@ -58,37 +61,51 @@
 	<title>Fitxaketa</title>
 </svelte:head>
 
-<div class="flex min-h-screen flex-col items-center justify-center px-4 py-8">
-	<p class="text-lg text-text-muted">{hoy}</p>
-
-	<div class="mt-8 text-center">
-		<p class="font-mono text-6xl font-bold tabular-nums tracking-wider text-text">{elapsed}</p>
-	</div>
-
-	<div class="mt-4">
-		{#if clockedIn}
-			<span class="font-semibold text-primary">Trabajando</span>
-		{:else}
-			<span class="text-text-muted">Descansando</span>
+<div class="mx-auto flex min-h-screen w-full max-w-sm flex-col items-center gap-6 px-4 py-8">
+	{#each dashboardLayoutPorDefecto as slot (slot.id)}
+		{#if slot.visible}
+			<div class="w-full">
+				{#if slot.id === 'cabecera' && slot.variante === 'A1'}
+					<CabeceraFechaHora {ahora} />
+				{:else if slot.id === 'cronometro' && slot.variante === 'B1'}
+					<CronometroCard {elapsed} {clockedIn} />
+				{:else if slot.id === 'estado' && slot.variante === 'C1'}
+					<div class="text-center"><EstadoPill {clockedIn} /></div>
+				{:else if slot.id === 'resumen' && slot.variante === 'D1'}
+					<ResumenStatCards {jornadasHoy} {settings} {ahora} />
+				{:else if slot.id === 'contexto' && slot.variante === 'E4'}
+					<AvisoJornadaAbierta jornada={avisoAnterior} />
+				{/if}
+			</div>
 		{/if}
-	</div>
 
-	<button
-		onclick={handleFichar}
-		class="mt-8 rounded-xl px-8 py-4 text-lg font-semibold text-white transition-colors"
-		class:bg-primary={!clockedIn}
-		class:hover:bg-primary-dark={!clockedIn}
-		class:bg-danger={clockedIn}
-		class:hover:bg-danger-dark={clockedIn}
-	>
-		{clockedIn ? 'Fichar salida' : 'Fichar entrada'}
-	</button>
+		{#if slot.id === 'estado'}
+			<button
+				onclick={handleFichar}
+				class="min-h-11 w-full rounded-xl px-8 py-4 text-lg font-semibold text-white transition-colors"
+				class:bg-primary={!clockedIn}
+				class:hover:bg-primary-dark={!clockedIn}
+				class:bg-danger={clockedIn}
+				class:hover:bg-danger-dark={clockedIn}
+			>
+				{clockedIn ? 'Fichar salida' : 'Fichar entrada'}
+			</button>
+		{/if}
 
-	<div class="mt-8 text-center text-text-muted">
-		<p class="text-sm">
-			Hoy: {Math.floor(resumen.totalHoras)}h {Math.round((resumen.totalHoras % 1) * 60)}m |
-			{jornadasHoy.length}
-			{jornadasHoy.length === 1 ? 'jornada' : 'jornadas'}
-		</p>
-	</div>
+		{#if slot.id === 'resumen'}
+			<button
+				type="button"
+				onclick={() => (modalAbierta = true)}
+				class="flex min-h-11 items-center gap-1.5 text-sm text-text-muted hover:text-text"
+			>
+				<span class="text-lg leading-none">＋</span> Añadir fichaje
+			</button>
+		{/if}
+	{/each}
 </div>
+
+<AltaManualModal
+	open={modalAbierta}
+	onClose={() => (modalAbierta = false)}
+	minJornadaMinutos={minJornada}
+/>
