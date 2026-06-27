@@ -40,7 +40,11 @@
 	});
 
 	function handleExportar(): void {
-		exportarJornadas(jornadasFiltradas);
+		void exportarJornadas({
+			jornadas: jornadasFiltradas,
+			snapshots: settings,
+			filtro: filtroTemporal
+		});
 		mostrarAvisoExport = true;
 		setTimeout(() => (mostrarAvisoExport = false), 3000);
 	}

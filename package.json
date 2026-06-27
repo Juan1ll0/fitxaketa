@@ -80,6 +80,7 @@
 	},
 	"dependencies": {
 		"chart.js": "^4.5.1",
-		"dexie": "^4.4.4"
+		"dexie": "^4.4.4",
+		"write-excel-file": "^4.1.1"
 	}
 }

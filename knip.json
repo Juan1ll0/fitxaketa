@@ -9,5 +9,6 @@
 	],
 	"project": ["src/**/*.{ts,svelte}"],
 	"ignoreDependencies": ["tailwindcss", "@secretlint/secretlint-rule-preset-recommend"],
-	"ignoreUnresolved": ["^\\$app/.+"]
+	"ignoreUnresolved": ["^\\$app/.+"],
+	"tags": ["-@internal"]
 }
