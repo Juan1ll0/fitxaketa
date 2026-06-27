@@ -8,7 +8,10 @@
 		"src/lib/stores/app-state.svelte.ts"
 	],
 	"project": ["src/**/*.{ts,svelte}"],
-	"ignoreDependencies": ["tailwindcss", "@secretlint/secretlint-rule-preset-recommend"],
-	"ignoreUnresolved": ["^\\$app/.+"],
-	"tags": ["-@internal"]
+	"ignoreDependencies": [
+		"tailwindcss",
+		"@secretlint/secretlint-rule-preset-recommend",
+		"workbox-build"
+	],
+	"ignoreUnresolved": ["^\\$app/.+"]
 }

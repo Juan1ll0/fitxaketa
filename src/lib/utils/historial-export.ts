@@ -76,7 +76,7 @@ function generarNombreFichero(): string {
 }
 
 /** Descripción legible del filtro: "semana del 23 al 29 de junio de 2026", etc.
- *  @internal — usado por el modal de confirmación en Fase 3 (spec 007 AC-02).
+ *  Usado por el modal de confirmación en Fase 3 (spec 007 AC-02).
  */
 export function describirPeriodo(filtro: FiltroTemporal, primerDia: number): string {
 	if (filtro.tipo === 'periodo') {
