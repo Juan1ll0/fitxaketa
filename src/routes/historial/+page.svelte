@@ -8,7 +8,8 @@
 	import { agruparPorDia } from '$lib/utils/dashboard';
 	import HistorialFiltros from '$lib/components/HistorialFiltros.svelte';
 	import DiaGroup from '$lib/components/DiaGroup.svelte';
-	import { exportarJornadas } from '$lib/utils/historial-export';
+	import ExportConfirmModal from '$lib/components/ExportConfirmModal.svelte';
+	import { exportarJornadas, describirPeriodo } from '$lib/utils/historial-export';
 
 	let jornadas = $state<Jornada[]>([]);
 	let settings = $state<Settings[]>([]);
@@ -18,12 +19,13 @@
 		fechaReferencia: new Date()
 	});
 	let filtroEstado = $state<FiltroEstado>('cerradas');
-	let mostrarAvisoExport = $state(false);
+	let mostrarModal = $state(false);
 
 	let primerDia = $derived(settingsActual(settings).primer_dia_semana);
 	let jornadasTemporal = $derived(aplicarFiltroTemporal(jornadas, filtroTemporal, primerDia));
 	let jornadasFiltradas = $derived(filtrarPorEstado(jornadasTemporal, filtroEstado));
 	let grupos = $derived(agruparPorDia(jornadasFiltradas));
+	let hayCerradas = $derived(jornadasFiltradas.some((j) => j.status === 'closed'));
 
 	$effect(() => {
 		const unsubscribe = subscribe(() => {
@@ -40,13 +42,20 @@
 	});
 
 	function handleExportar(): void {
-		void exportarJornadas({
+		mostrarModal = true;
+	}
+
+	async function confirmarExportacion(): Promise<void> {
+		await exportarJornadas({
 			jornadas: jornadasFiltradas,
 			snapshots: settings,
 			filtro: filtroTemporal
 		});
-		mostrarAvisoExport = true;
-		setTimeout(() => (mostrarAvisoExport = false), 3000);
+		mostrarModal = false;
+	}
+
+	function cancelarExportacion(): void {
+		mostrarModal = false;
 	}
 </script>
 
@@ -61,7 +70,8 @@
 			<button
 				type="button"
 				onclick={handleExportar}
-				class="flex min-h-11 items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-text transition-colors hover:bg-surface-light"
+				disabled={!hayCerradas}
+				class="flex min-h-11 items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-text transition-colors hover:bg-surface-light disabled:cursor-not-allowed disabled:opacity-50"
 			>
 				<svg
 					class="h-4 w-4"
@@ -83,15 +93,6 @@
 
 		<div class="mt-4">
 			<HistorialFiltros bind:filtroTemporal bind:filtroEstado {primerDia} />
-			{#if mostrarAvisoExport}
-				<p
-					class="mt-2 rounded-lg bg-primary/10 px-4 py-2 text-sm text-primary"
-					role="status"
-					aria-live="polite"
-				>
-					Exportación próximamente disponible
-				</p>
-			{/if}
 		</div>
 
 		{#if jornadas.length === 0}
@@ -116,3 +117,11 @@
 		{/if}
 	</div>
 </div>
+
+{#if mostrarModal}
+	<ExportConfirmModal
+		periodo={describirPeriodo(filtroTemporal, primerDia)}
+		onConfirm={confirmarExportacion}
+		onCancel={cancelarExportacion}
+	/>
+{/if}

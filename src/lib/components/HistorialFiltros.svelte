@@ -52,10 +52,6 @@
 	function limpiar(): void {
 		filtroTemporal = defecto;
 	}
-
-	function togglePanel(): void {
-		panelAbierto = !panelAbierto;
-	}
 </script>
 
 <div class="flex flex-col gap-3">
@@ -72,24 +68,20 @@
 	{:else if filtroTemporal.tipo === 'fecha'}
 		{@const f = filtroTemporal}
 		<div class="flex flex-wrap items-end gap-2">
-			<div class="flex flex-col gap-1">
-				<FechaFiltro
-					bind:fecha={() => f.fecha, (v) => (filtroTemporal = { ...f, fecha: v })}
-					{hoyISO}
-				/>
-			</div>
+			<FechaFiltro
+				bind:fecha={() => f.fecha, (v) => (filtroTemporal = { ...f, fecha: v })}
+				{hoyISO}
+			/>
 			<button type="button" onclick={limpiar} class="{baseBtn} {inactiveBtn}">Limpiar</button>
 		</div>
 	{:else}
 		{@const f = filtroTemporal}
 		<div class="flex flex-wrap items-end gap-2">
-			<div class="flex flex-col gap-1">
-				<RangoFechas
-					bind:desde={() => f.desde, (d) => (filtroTemporal = { ...f, desde: d })}
-					bind:hasta={() => f.hasta, (h) => (filtroTemporal = { ...f, hasta: h })}
-					{hoyISO}
-				/>
-			</div>
+			<RangoFechas
+				bind:desde={() => f.desde, (d) => (filtroTemporal = { ...f, desde: d })}
+				bind:hasta={() => f.hasta, (h) => (filtroTemporal = { ...f, hasta: h })}
+				{hoyISO}
+			/>
 			<button type="button" onclick={limpiar} class="{baseBtn} {inactiveBtn}">Limpiar</button>
 		</div>
 	{/if}
@@ -98,7 +90,7 @@
 	<div>
 		<button
 			type="button"
-			onclick={togglePanel}
+			onclick={() => (panelAbierto = !panelAbierto)}
 			aria-expanded={panelAbierto}
 			aria-controls="filtros-panel"
 			class="flex min-h-11 w-full items-center gap-2 rounded-lg bg-surface-light px-4 py-2 text-sm font-medium text-text transition-colors hover:bg-surface-light/80"
@@ -111,10 +103,8 @@
 				stroke-width="2"
 				stroke-linecap="round"
 				stroke-linejoin="round"
-				aria-hidden="true"
+				aria-hidden="true"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z" /></svg
 			>
-				<path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z" />
-			</svg>
 			<span>Filtros</span>
 			{#if !panelAbierto}
 				<span class="rounded-full bg-primary/15 px-2 py-0.5 text-xs font-medium text-primary">
@@ -129,10 +119,8 @@
 				fill="none"
 				stroke="currentColor"
 				stroke-width="2"
-				aria-hidden="true"
+				aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg
 			>
-				<path d="M6 9l6 6 6-6" />
-			</svg>
 		</button>
 
 		{#if panelAbierto}
