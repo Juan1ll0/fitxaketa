@@ -9,10 +9,11 @@
  * - Nombre de fichero
  * - Sin datos → no se genera
  * - describirPeriodo
+ * - generarTitulo (fila 1 con título descriptivo)
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { Jornada, Settings } from '$lib/db';
-import { exportarJornadas, describirPeriodo } from '$lib/utils/historial-export';
+import { describirPeriodo, exportarJornadas, generarTitulo } from '$lib/utils/historial-export';
 import type { FiltroTemporal } from '$lib/utils/historial-filtros';
 
 // ─── Mocks ────────────────────────────────────────────────────────────────────
@@ -22,6 +23,7 @@ const {
 	mockCrearWorkbook,
 	mockEscribirCabecera,
 	mockEscribirFilaTotal,
+	mockEscribirTitulo,
 	mockGuardarFichero,
 	mockEscribirAgrupadoPorMes,
 	mockEscribirAgrupadoPorSemana,
@@ -34,6 +36,7 @@ const {
 	})),
 	mockEscribirCabecera: vi.fn(),
 	mockEscribirFilaTotal: vi.fn(),
+	mockEscribirTitulo: vi.fn(),
 	mockGuardarFichero: vi.fn().mockResolvedValue(undefined),
 	mockEscribirAgrupadoPorMes: vi.fn(),
 	mockEscribirAgrupadoPorSemana: vi.fn(),
@@ -50,6 +53,7 @@ vi.mock('$lib/utils/excel-wrapper', () => ({
 	crearWorkbook: mockCrearWorkbook,
 	escribirCabecera: mockEscribirCabecera,
 	escribirFilaTotal: mockEscribirFilaTotal,
+	escribirTitulo: mockEscribirTitulo,
 	guardarFichero: mockGuardarFichero
 }));
 
@@ -540,6 +544,140 @@ describe('historial-export', () => {
 				hasta: new Date('2026-06-15')
 			};
 			expect(describirPeriodo(filtro, 1)).toBe('fecha 15 de junio de 2026');
+		});
+	});
+
+	// ── (k) generarTitulo (fila 1 del XLSX, AC-05a) ──────────────────────────
+
+	describe('generarTitulo (AC-05a)', () => {
+		it('"Informe anual - 2026" para periodo=año', () => {
+			const filtro = filtroPeriodo('año', new Date(2026, 5, 15));
+			expect(generarTitulo(filtro, 1)).toBe('Informe anual - 2026');
+		});
+
+		it('"Informe mensual - mayo 2026" para periodo=mes', () => {
+			const filtro = filtroPeriodo('mes', new Date(2026, 4, 15));
+			expect(generarTitulo(filtro, 1)).toBe('Informe mensual - mayo 2026');
+		});
+
+		it('"Informe mensual - enero 2026" para periodo=mes de enero', () => {
+			const filtro = filtroPeriodo('mes', new Date(2026, 0, 15));
+			expect(generarTitulo(filtro, 1)).toBe('Informe mensual - enero 2026');
+		});
+
+		it('"Informe personalizado - Semana 25 de junio 2026" para periodo=semana', () => {
+			// 2026-06-17 (miércoles) pertenece a la semana ISO 25 de 2026
+			// (lunes 2026-06-15 a domingo 2026-06-21)
+			const filtro = filtroPeriodo('semana', new Date(2026, 5, 17));
+			expect(generarTitulo(filtro, 1)).toBe('Informe personalizado - Semana 25 de junio 2026');
+		});
+
+		it('"Informe personalizado - 5 de junio de 2026" para filtro tipo=fecha', () => {
+			const filtro: FiltroTemporal = { tipo: 'fecha', fecha: new Date(2026, 5, 5) };
+			expect(generarTitulo(filtro, 1)).toBe('Informe personalizado - 5 de junio de 2026');
+		});
+
+		it('"Informe personalizado - 1 al 15 de junio de 2026" para rango multi-día', () => {
+			const filtro: FiltroTemporal = {
+				tipo: 'rango',
+				desde: new Date(2026, 5, 1),
+				hasta: new Date(2026, 5, 15)
+			};
+			expect(generarTitulo(filtro, 1)).toBe('Informe personalizado - 1 al 15 de junio de 2026');
+		});
+
+		it('usa formato fecha cuando el rango es un solo día', () => {
+			const filtro: FiltroTemporal = {
+				tipo: 'rango',
+				desde: new Date(2026, 5, 15),
+				hasta: new Date(2026, 5, 15)
+			};
+			expect(generarTitulo(filtro, 1)).toBe('Informe personalizado - 15 de junio de 2026');
+		});
+
+		it('calcula correctamente el número de semana ISO 2 para el primer lunes de enero 2026', () => {
+			// 2026-01-05 (lunes) inicia la semana ISO 2 de 2026.
+			// La ISO week 1 de 2026 es 2025-12-29 (lun) a 2026-01-04 (dom).
+			const filtro = filtroPeriodo('semana', new Date(2026, 0, 5));
+			expect(generarTitulo(filtro, 1)).toBe('Informe personalizado - Semana 2 de enero 2026');
+		});
+
+		it('el mes/año del título corresponde al inicio de la semana (puede ser mes/año anterior)', () => {
+			// 2024-12-30 (lunes) es la semana ISO 1 de 2025, pero su inicio es
+			// diciembre 2024, por lo que el título muestra ese mes/año.
+			const filtro = filtroPeriodo('semana', new Date(2024, 11, 30));
+			expect(generarTitulo(filtro, 1)).toBe('Informe personalizado - Semana 1 de diciembre 2024');
+		});
+	});
+
+	// ── (l) escribirTitulo se llama como primera operación ─────────────────────
+
+	describe('escribirTitulo se llama como primera operación (AC-05a)', () => {
+		it('se llama exactamente una vez al exportar', async () => {
+			const jornada = makeJornada();
+			await exportarJornadas({
+				jornadas: [jornada],
+				snapshots: [makeSettings()],
+				filtro: filtroPeriodo('mes', new Date(2026, 5, 15))
+			});
+			expect(mockEscribirTitulo).toHaveBeenCalledTimes(1);
+		});
+
+		it('recibe el título generado y el número de columnas', async () => {
+			const jornada = makeJornada();
+			await exportarJornadas({
+				jornadas: [jornada],
+				snapshots: [makeSettings()],
+				filtro: filtroPeriodo('año', new Date(2026, 5, 15))
+			});
+			expect(mockEscribirTitulo).toHaveBeenCalledWith(
+				expect.anything(),
+				'Informe anual - 2026',
+				7 // 7 columnas con contrato + total semana
+			);
+		});
+
+		it('se llama con 5 columnas para export sin contrato', async () => {
+			const jornada = makeJornada();
+			await exportarJornadas({
+				jornadas: [jornada],
+				snapshots: [makeSettings({ horas_semanales: 0 })],
+				filtro: filtroPeriodo('semana', new Date(2026, 5, 22))
+			});
+			expect(mockEscribirTitulo).toHaveBeenCalledWith(
+				expect.anything(),
+				expect.stringContaining('Informe personalizado'),
+				5
+			);
+		});
+
+		it('se llama con 6 columnas para export con contrato en semana', async () => {
+			const jornada = makeJornada();
+			await exportarJornadas({
+				jornadas: [jornada],
+				snapshots: [makeSettings()],
+				filtro: filtroPeriodo('semana', new Date(2026, 5, 22))
+			});
+			expect(mockEscribirTitulo).toHaveBeenCalledWith(
+				expect.anything(),
+				expect.stringContaining('Informe personalizado'),
+				6
+			);
+		});
+
+		it('se llama ANTES de escribirCabecera (orden de invocación)', async () => {
+			const jornada = makeJornada();
+			const callOrder: string[] = [];
+			mockEscribirTitulo.mockImplementation(() => callOrder.push('titulo'));
+			mockEscribirCabecera.mockImplementation(() => callOrder.push('cabecera'));
+
+			await exportarJornadas({
+				jornadas: [jornada],
+				snapshots: [makeSettings()],
+				filtro: filtroPeriodo('mes', new Date(2026, 5, 15))
+			});
+
+			expect(callOrder.indexOf('titulo')).toBeLessThan(callOrder.indexOf('cabecera'));
 		});
 	});
 });

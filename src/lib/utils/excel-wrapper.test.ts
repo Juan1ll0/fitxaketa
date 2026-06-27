@@ -16,6 +16,7 @@ import {
 	escribirFilaNumerica,
 	escribirFilaTotal,
 	escribirSeparador,
+	escribirTitulo,
 	guardarFichero
 } from '$lib/utils/excel-wrapper';
 
@@ -196,11 +197,92 @@ describe('excel-wrapper', () => {
 	});
 
 	describe('escribirSeparador', () => {
-		it('añade una fila vacía como separador visual', () => {
+		it('sin filas previas, añade una fila vacía (no hay nada que separar)', () => {
 			const wb = crearWorkbook();
 			escribirSeparador(wb);
 			expect(wb.rows).toHaveLength(1);
 			expect(wb.rows[0]).toEqual([]);
+		});
+
+		it('después de filas con contenido, añade fila con borde inferior 2pt sólido negro', () => {
+			const wb = crearWorkbook();
+			escribirFila(wb, ['A', 'B', 'C']);
+			escribirSeparador(wb);
+			expect(wb.rows).toHaveLength(2);
+			expect(wb.rows[1]).toHaveLength(3);
+			for (const cell of wb.rows[1]) {
+				expect(cell).toMatchObject({
+					bottomBorderStyle: 'medium',
+					bottomBorderColor: '#000000'
+				});
+			}
+		});
+
+		it('el número de celdas del separador coincide con la fila previa', () => {
+			const wb = crearWorkbook();
+			escribirFila(wb, ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']);
+			escribirSeparador(wb);
+			expect(wb.rows[1]).toHaveLength(8);
+		});
+
+		it('el separador no contiene celdas con valor (solo bordes)', () => {
+			const wb = crearWorkbook();
+			escribirFila(wb, ['A', 'B']);
+			escribirSeparador(wb);
+			for (const cell of wb.rows[1]) {
+				expect(cell).not.toMatchObject({ value: expect.anything() });
+			}
+		});
+	});
+
+	describe('escribirTitulo (AC-05a)', () => {
+		it('añade una fila con el título en la primera celda', () => {
+			const wb = crearWorkbook();
+			escribirTitulo(wb, 'Informe anual - 2026', 5);
+			expect(wb.rows).toHaveLength(1);
+			expect(wb.rows[0][0]).toMatchObject({ value: 'Informe anual - 2026' });
+		});
+
+		it('la celda del título se extiende columnSpan columnas (merge visual)', () => {
+			const wb = crearWorkbook();
+			escribirTitulo(wb, 'Informe anual - 2026', 8);
+			expect(wb.rows[0][0]).toMatchObject({ columnSpan: 8 });
+		});
+
+		it('el número de celdas de la fila es igual a numColumnas', () => {
+			const wb = crearWorkbook();
+			escribirTitulo(wb, 'Título', 5);
+			expect(wb.rows[0]).toHaveLength(5);
+		});
+
+		it('las celdas restantes del span son null (la librería aplica los estilos)', () => {
+			const wb = crearWorkbook();
+			escribirTitulo(wb, 'Título', 8);
+			for (let i = 1; i < 8; i++) {
+				expect(wb.rows[0][i]).toBeNull();
+			}
+		});
+
+		it('aplica estilo: negrita, 16pt, centrado y altura de fila mayor', () => {
+			const wb = crearWorkbook();
+			escribirTitulo(wb, 'Informe anual - 2026', 5);
+			const title = wb.rows[0][0];
+			expect(title).toMatchObject({
+				fontWeight: 'bold',
+				fontSize: 16,
+				align: 'center',
+				alignVertical: 'center',
+				height: 24
+			});
+		});
+
+		it('funciona con cualquier número de columnas (5, 6, 7 u 8)', () => {
+			for (const n of [5, 6, 7, 8]) {
+				const wb = crearWorkbook();
+				escribirTitulo(wb, 'Título', n);
+				expect(wb.rows[0]).toHaveLength(n);
+				expect(wb.rows[0][0]).toMatchObject({ columnSpan: n });
+			}
 		});
 	});
 

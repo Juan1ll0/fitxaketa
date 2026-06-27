@@ -1,6 +1,7 @@
 import type { Cell, SheetData } from 'write-excel-file/browser';
+import { BORDE_GUIONES, celdaTotalSemana } from './excel-wrapper-celda';
+export { celdaTotalDia, celdaBalanceDiario } from './excel-wrapper-celda';
 
-/** Estado interno del workbook: filas acumuladas y nombre de hoja. */
 export interface Workbook {
 	rows: SheetData;
 	sheetName: string;
@@ -8,47 +9,29 @@ export interface Workbook {
 
 const HOJA_POR_DEFECTO = 'Jornadas';
 const FONDO_CABECERA = '#e5e7eb';
-const TAMANO_FUENTE_BASE = 10;
+const TAMANO_FUENTE_TITULO = 16;
 const TAMANO_FUENTE_TOTAL = 14;
-const COLOR_ROJO = '#dc2626';
-const COLOR_VERDE = '#16a34a';
-const COLOR_ROJO_PASTEL = '#fecaca';
-const COLOR_VERDE_PASTEL = '#bbf7d0';
-
-/** Celda numérica para "Total día" (horas decimales). `null` = celda vacía. */
-export function celdaTotalDia(horas: number | null): Cell | null {
-	return horas === null ? null : { value: horas, type: Number, format: '0.0' };
-}
-
-/** Celda numérica para "Balance diario": negrita + rojo si < 0, verde si >= 0. */
-export function celdaBalanceDiario(balance: number | null): Cell | null {
-	if (balance === null) return null;
-	return {
-		value: balance,
-		type: Number,
-		fontWeight: 'bold',
-		fontSize: TAMANO_FUENTE_BASE,
-		textColor: balance < 0 ? COLOR_ROJO : COLOR_VERDE,
-		format: '+0.0;-0.0;0.0'
-	};
-}
-
-/** Celda numérica para "Total semana" (7ª col): negrita, +4pt, fondo pastel. */
-function celdaTotalSemana(horas: number | null): Cell | null {
-	if (horas === null) return null;
-	return {
-		value: horas,
-		type: Number,
-		fontWeight: 'bold',
-		fontSize: TAMANO_FUENTE_TOTAL,
-		textColor: '#000000',
-		backgroundColor: horas < 0 ? COLOR_ROJO_PASTEL : COLOR_VERDE_PASTEL,
-		format: '0.0'
-	};
-}
+const ALTURA_FILA_TITULO = 24;
 
 export function crearWorkbook(): Workbook {
 	return { rows: [], sheetName: HOJA_POR_DEFECTO };
+}
+
+/** Fila 1: título del informe fusionado en todas las columnas. Llamar ANTES de `escribirCabecera`. */
+export function escribirTitulo(workbook: Workbook, titulo: string, numColumnas: number): void {
+	const cells: Cell[] = [
+		{
+			value: titulo,
+			fontWeight: 'bold',
+			fontSize: TAMANO_FUENTE_TITULO,
+			align: 'center',
+			alignVertical: 'center',
+			columnSpan: numColumnas,
+			height: ALTURA_FILA_TITULO
+		}
+	];
+	for (let i = 1; i < numColumnas; i++) cells.push(null);
+	workbook.rows.push(cells);
 }
 
 export function escribirCabecera(workbook: Workbook, columnas: string[]): void {
@@ -85,31 +68,39 @@ export function escribirFilaTotal(
 ): void {
 	const cells: Cell[] = [];
 	for (let i = 0; i < numColumnas; i++) {
-		if (i === 0) {
+		if (i === 0)
 			cells.push({
+				...BORDE_GUIONES,
 				value: 'TOTAL',
 				fontWeight: 'bold',
-				fontSize: TAMANO_FUENTE_TOTAL,
-				topBorderStyle: 'thick'
+				fontSize: TAMANO_FUENTE_TOTAL
 			});
-		} else if (i === columnaTotalIdx) {
+		else if (i === columnaTotalIdx)
 			cells.push({
+				...BORDE_GUIONES,
 				value: totalHoras,
 				type: Number,
 				fontWeight: 'bold',
 				fontSize: TAMANO_FUENTE_TOTAL,
-				topBorderStyle: 'thick',
 				format: '0.0'
 			});
-		} else {
-			cells.push({ topBorderStyle: 'thick' });
-		}
+		else cells.push(BORDE_GUIONES);
 	}
 	workbook.rows.push(cells);
 }
 
+/** Separador entre periodos: fila con borde inferior 2pt sólido negro, sin contenido; nº de celdas = fila previa. */
 export function escribirSeparador(workbook: Workbook): void {
-	workbook.rows.push([]);
+	const prev = workbook.rows[workbook.rows.length - 1];
+	if (!prev || prev.length === 0) {
+		workbook.rows.push([]);
+		return;
+	}
+	const cells: Cell[] = [];
+	for (let i = 0; i < prev.length; i++) {
+		cells.push({ bottomBorderStyle: 'medium', bottomBorderColor: '#000000' });
+	}
+	workbook.rows.push(cells);
 }
 
 /** Añade la celda de la 7ª columna (Total semana) al final de la última fila. */

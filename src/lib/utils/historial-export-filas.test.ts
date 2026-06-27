@@ -371,7 +371,14 @@ describe('escribirAgrupadoPorSemana con Total semana (AC-16)', () => {
 
 		// 2 jornadas + 1 separador entre ellas
 		expect(wb.rows.length).toBe(3);
-		expect(wb.rows[1]).toEqual([]);
+		// El separador tiene 7 celdas con borde inferior 2pt sólido negro (no fila vacía)
+		expect(wb.rows[1]).toHaveLength(7);
+		for (const cell of wb.rows[1]) {
+			expect(cell).toMatchObject({
+				bottomBorderStyle: 'medium',
+				bottomBorderColor: '#000000'
+			});
+		}
 	});
 });
 

@@ -7,6 +7,7 @@ import {
 	crearWorkbook,
 	escribirCabecera,
 	escribirFilaTotal,
+	escribirTitulo,
 	guardarFichero
 } from '$lib/utils/excel-wrapper';
 import {
@@ -45,6 +46,19 @@ function esPeriodoMesOAnio(filtro: FiltroTemporal): boolean {
 	return filtro.tipo === 'periodo' && (filtro.periodo === 'mes' || filtro.periodo === 'año');
 }
 
+/** Semana ISO 8601 de la fecha (1-53). */
+function numeroSemanaISO(fecha: Date): number {
+	const d = new Date(Date.UTC(fecha.getFullYear(), fecha.getMonth(), fecha.getDate()));
+	d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+	const inicio = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+	return Math.ceil(((d.getTime() - inicio.getTime()) / 86_400_000 + 1) / 7);
+}
+
+/** Formato largo en español: "5 de junio de 2026". */
+function fechaLarga(d: Date): string {
+	return `${d.getDate()} de ${NOMBRES_MES[d.getMonth()]} de ${d.getFullYear()}`;
+}
+
 /**
  * Genera el fichero XLSX con las jornadas cerradas del filtro, ordenadas
  * ascendentemente. Columnas condicionales según contrato y periodo. Si hay
@@ -72,6 +86,7 @@ export async function exportarJornadas(options: ExportOptions): Promise<void> {
 
 	const wb = crearWorkbook();
 	const columnas = determinarColumnas(tieneContrato, tieneTotalSemana);
+	escribirTitulo(wb, generarTitulo(filtro, settings.primer_dia_semana), columnas.length);
 	escribirCabecera(wb, columnas);
 
 	if (tieneTotalSemana) {
@@ -108,13 +123,26 @@ export function describirPeriodo(filtro: FiltroTemporal, primerDia: number): str
 		fin.setDate(inicio.getDate() + 6);
 		return `semana del ${inicio.getDate()} al ${fin.getDate()} de ${NOMBRES_MES[fin.getMonth()]} de ${fin.getFullYear()}`;
 	}
-	if (filtro.tipo === 'fecha') {
-		const f = filtro.fecha;
-		return `fecha ${f.getDate()} de ${NOMBRES_MES[f.getMonth()]} de ${f.getFullYear()}`;
-	}
+	if (filtro.tipo === 'fecha') return `fecha ${fechaLarga(filtro.fecha)}`;
 	const d = filtro.desde;
 	const h = filtro.hasta;
-	if (claveDia(d) === claveDia(h))
-		return `fecha ${d.getDate()} de ${NOMBRES_MES[d.getMonth()]} de ${d.getFullYear()}`;
+	if (claveDia(d) === claveDia(h)) return `fecha ${fechaLarga(d)}`;
 	return `rango del ${d.getDate()} al ${h.getDate()} de ${NOMBRES_MES[h.getMonth()]} de ${h.getFullYear()}`;
+}
+
+/** Título descriptivo del informe (fila 1 del XLSX). Variantes según el tipo de filtro. */
+export function generarTitulo(filtro: FiltroTemporal, primerDia: number): string {
+	if (filtro.tipo === 'periodo') {
+		const ref = filtro.fechaReferencia;
+		if (filtro.periodo === 'año') return `Informe anual - ${ref.getFullYear()}`;
+		if (filtro.periodo === 'mes')
+			return `Informe mensual - ${NOMBRES_MES[ref.getMonth()]} ${ref.getFullYear()}`;
+		const inicio = inicioSemana(ref, primerDia);
+		return `Informe personalizado - Semana ${numeroSemanaISO(inicio)} de ${NOMBRES_MES[inicio.getMonth()]} ${inicio.getFullYear()}`;
+	}
+	if (filtro.tipo === 'fecha') return `Informe personalizado - ${fechaLarga(filtro.fecha)}`;
+	const d = filtro.desde;
+	const h = filtro.hasta;
+	if (claveDia(d) === claveDia(h)) return `Informe personalizado - ${fechaLarga(d)}`;
+	return `Informe personalizado - ${d.getDate()} al ${h.getDate()} de ${NOMBRES_MES[d.getMonth()]} de ${d.getFullYear()}`;
 }
