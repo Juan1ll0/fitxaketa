@@ -1,40 +1,39 @@
 import type { Jornada, Settings } from '$lib/db';
 import type { BalanceDia } from '$lib/utils/dashboard-types';
+import type { Cell } from 'write-excel-file/browser';
 import type { Workbook } from '$lib/utils/excel-wrapper';
-import { escribirFila, escribirFilaResumen, escribirSeparador } from '$lib/utils/excel-wrapper';
+import {
+	celdaBalanceDiario,
+	celdaTotalDia,
+	escribirColumnaTotalSemana,
+	escribirFila,
+	escribirSeparador
+} from '$lib/utils/excel-wrapper';
 import { claveDia, diaDeJornada } from '$lib/utils/fecha-negocio';
 import { duracionEfectivaMinutos } from '$lib/utils/redondeo';
-import { calcularBalancePeriodo } from '$lib/utils/dashboard-exceso';
 import { agruparPorSemana } from '$lib/utils/export-agrupacion';
 
 const COLUMNAS_BASE = ['Fecha', 'Entrada', 'Salida', 'Duración', 'Total día'];
-const FORMATO_FECHA = new Intl.DateTimeFormat('es-ES', {
+const F_FECHA = new Intl.DateTimeFormat('es-ES', {
 	day: '2-digit',
 	month: '2-digit',
 	year: 'numeric'
 });
-const FORMATO_HORA = new Intl.DateTimeFormat('es-ES', { hour: '2-digit', minute: '2-digit' });
+const F_HORA = new Intl.DateTimeFormat('es-ES', { hour: '2-digit', minute: '2-digit' });
 
 /** Estado compartido por las funciones constructoras de filas. */
 export interface ContextoFilas {
 	snapshots: Settings[];
 	balances: Map<string, BalanceDia>;
 	tieneContrato: boolean;
+	tieneTotalSemana: boolean;
 }
 
-/** Minutos a horas decimales con coma como separador (formato español). */
-function formatearDecimal(minutos: number): string {
-	return (minutos / 60).toFixed(1).replace('.', ',');
-}
-
-/** Balance (con signo) en horas decimales. `conH=true` añade el sufijo "h". */
-function formatearBalance(minutos: number, conH: boolean): string {
-	const base = `${minutos >= 0 ? '+' : '-'}${formatearDecimal(Math.abs(minutos))}`;
-	return conH ? `${base}h` : base;
-}
-
-function claveMes(fecha: Date): string {
-	return `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}`;
+/** Minutos a formato hh:mm con cero a la izquierda (ej. 282 → "04:42"). */
+export function formatearDuracionHHMM(minutos: number): string {
+	const h = Math.floor(minutos / 60);
+	const m = minutos % 60;
+	return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
 function agruparPor(jornadas: Jornada[], claveFn: (j: Jornada) => string): Map<string, Jornada[]> {
@@ -47,78 +46,86 @@ function agruparPor(jornadas: Jornada[], claveFn: (j: Jornada) => string): Map<s
 	return grupos;
 }
 
-const agruparPorMes = (j: Jornada[]): Map<string, Jornada[]> =>
-	agruparPor(j, (x) => claveMes(new Date(x.start_time)));
 const agruparPorDia = (j: Jornada[]): Map<string, Jornada[]> =>
 	agruparPor(j, (x) => claveDia(diaDeJornada(x)));
 
-/** Columnas según contrato. La 6ª (Balance diario) solo si hay contrato. */
-export function determinarColumnas(tieneContrato: boolean): string[] {
-	return tieneContrato ? [...COLUMNAS_BASE, 'Balance diario'] : [...COLUMNAS_BASE];
+/** Columnas según contrato y periodo. Total semana (7ª) solo en mes/año con contrato. */
+export function determinarColumnas(tieneContrato: boolean, tieneTotalSemana: boolean): string[] {
+	const cols = [...COLUMNAS_BASE];
+	if (tieneContrato) cols.push('Balance diario');
+	if (tieneContrato && tieneTotalSemana) cols.push('Total semana');
+	return cols;
+}
+
+/** Suma de horas (decimal) de un grupo de jornadas con su redondeo aplicado. */
+export function totalHorasGrupo(jornadas: Jornada[], snapshots: Settings[]): number {
+	return jornadas.reduce((acc, j) => acc + duracionEfectivaMinutos(j, snapshots), 0) / 60;
 }
 
 function filaJornada(
 	j: Jornada,
 	ctx: ContextoFilas,
+	esPrimeraDelDia: boolean,
 	esUltimaDelDia: boolean
-): Array<string | number | null> {
+): Array<Cell | string | null> {
 	const bal = ctx.balances.get(claveDia(diaDeJornada(j)));
-	const fila: Array<string | number | null> = [
-		FORMATO_FECHA.format(diaDeJornada(j)),
-		FORMATO_HORA.format(j.start_time),
-		j.end_time ? FORMATO_HORA.format(j.end_time) : null,
-		formatearDecimal(duracionEfectivaMinutos(j, ctx.snapshots)),
-		esUltimaDelDia && bal ? formatearDecimal(bal.trabajado) : null
+	const tot = bal ? bal.trabajado / 60 : null;
+	const balH = bal ? bal.balance / 60 : null;
+	const fila: Array<Cell | string | null> = [
+		esPrimeraDelDia ? F_FECHA.format(diaDeJornada(j)) : null,
+		F_HORA.format(j.start_time),
+		j.end_time ? F_HORA.format(j.end_time) : null,
+		formatearDuracionHHMM(duracionEfectivaMinutos(j, ctx.snapshots)),
+		celdaTotalDia(esUltimaDelDia ? tot : null)
 	];
-	if (ctx.tieneContrato) {
-		fila.push(esUltimaDelDia && bal ? formatearBalance(bal.balance, false) : null);
-	}
+	if (ctx.tieneContrato) fila.push(celdaBalanceDiario(esUltimaDelDia ? balH : null));
 	return fila;
 }
 
-function escribirGrupo(wb: Workbook, jornadas: Jornada[], ctx: ContextoFilas): void {
-	for (const lista of agruparPorDia(jornadas).values()) {
-		const ultima = lista.length - 1;
-		for (let i = 0; i < lista.length; i++) {
-			escribirFila(wb, filaJornada(lista[i], ctx, i === ultima));
-		}
-	}
-	const totalMin = jornadas.reduce((acc, j) => acc + duracionEfectivaMinutos(j, ctx.snapshots), 0);
-	escribirFilaResumen(
-		wb,
-		`${formatearDecimal(totalMin)}h`,
-		ctx.tieneContrato
-			? formatearBalance(calcularBalancePeriodo(jornadas, ctx.snapshots), true)
-			: undefined
-	);
-}
-
-function escribirConAgrupador(
+function escribirJornadas(
 	wb: Workbook,
 	jornadas: Jornada[],
 	ctx: ContextoFilas,
-	agrupador: (j: Jornada[]) => Map<string, Jornada[]>
+	totalSemanaPorJornada: Map<Jornada, number>
 ): void {
-	let primero = true;
-	for (const lista of agrupador(jornadas).values()) {
-		if (!primero) escribirSeparador(wb);
-		primero = false;
-		escribirGrupo(wb, lista, ctx);
+	for (const lista of agruparPorDia(jornadas).values()) {
+		const ult = lista.length - 1;
+		for (let i = 0; i < lista.length; i++) {
+			const j = lista[i];
+			escribirFila(wb, filaJornada(j, ctx, i === 0, i === ult));
+			const ts = totalSemanaPorJornada.get(j);
+			if (ts !== undefined) escribirColumnaTotalSemana(wb, ts);
+		}
 	}
 }
 
-export const escribirAgrupadoPorMes = (
-	wb: Workbook,
-	jornadas: Jornada[],
-	ctx: ContextoFilas
-): void => escribirConAgrupador(wb, jornadas, ctx, agruparPorMes);
-
-export const escribirAgrupadoPorSemana = (
+function escribirSemanas(
 	wb: Workbook,
 	jornadas: Jornada[],
 	ctx: ContextoFilas,
 	primerDia: number
-): void => escribirConAgrupador(wb, jornadas, ctx, (j) => agruparPorSemana(j, primerDia));
+): void {
+	const semanas = agruparPorSemana(jornadas, primerDia);
+	const claves = [...semanas.keys()];
+	for (let i = 0; i < claves.length; i++) {
+		const lista = semanas.get(claves[i])!;
+		const mapa = new Map<Jornada, number>([
+			[lista[lista.length - 1], totalHorasGrupo(lista, ctx.snapshots)]
+		]);
+		escribirJornadas(wb, lista, ctx, mapa);
+		if (i < claves.length - 1) escribirSeparador(wb);
+	}
+}
 
-export const escribirGlobal = (wb: Workbook, jornadas: Jornada[], ctx: ContextoFilas): void =>
-	escribirGrupo(wb, jornadas, ctx);
+const sinTotal = new Map<Jornada, number>();
+export const escribirAgrupadoPorMes = (wb: Workbook, j: Jornada[], c: ContextoFilas): void =>
+	escribirJornadas(wb, j, c, sinTotal);
+export const escribirGlobal = (wb: Workbook, j: Jornada[], c: ContextoFilas): void =>
+	escribirJornadas(wb, j, c, sinTotal);
+export const escribirAgrupadoPorSemana = (
+	wb: Workbook,
+	j: Jornada[],
+	c: ContextoFilas,
+	primerDia: number
+): void =>
+	c.tieneTotalSemana ? escribirSemanas(wb, j, c, primerDia) : escribirJornadas(wb, j, c, sinTotal);

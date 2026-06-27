@@ -1,17 +1,20 @@
 /**
  * Tests para excel-wrapper.ts
  *
- * Verifica la creación de workbook, escritura de cabecera/filas/resumen,
- * y el guardado del fichero (con mock de write-excel-file).
- *
- * ACs cubiertos: AC-05, AC-07, AC-18
+ * Verifica la creación de workbook, escritura de cabecera/filas/TOTAL,
+ * celdas numéricas con formato condicional, columna Total semana, y el
+ * guardado del fichero (con mock de write-excel-file).
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
+	celdaBalanceDiario,
+	celdaTotalDia,
 	crearWorkbook,
 	escribirCabecera,
+	escribirColumnaTotalSemana,
 	escribirFila,
-	escribirFilaResumen,
+	escribirFilaNumerica,
+	escribirFilaTotal,
 	escribirSeparador,
 	guardarFichero
 } from '$lib/utils/excel-wrapper';
@@ -34,11 +37,10 @@ describe('excel-wrapper', () => {
 	});
 
 	describe('crearWorkbook', () => {
-		it('devuelve un Workbook con filas vacías, nombre de hoja por defecto y numColumnas=0', () => {
+		it('devuelve un Workbook con filas vacías y nombre de hoja por defecto', () => {
 			const wb = crearWorkbook();
 			expect(wb.rows).toEqual([]);
 			expect(wb.sheetName).toBe('Jornadas');
-			expect(wb.numColumnas).toBe(0);
 		});
 	});
 
@@ -50,113 +52,146 @@ describe('excel-wrapper', () => {
 			expect(wb.rows[0]).toHaveLength(3);
 		});
 
-		it('configura numColumnas correctamente', () => {
-			const wb = crearWorkbook();
-			escribirCabecera(wb, ['A', 'B', 'C', 'D', 'E', 'F']);
-			expect(wb.numColumnas).toBe(6);
-		});
-
-		it('las celdas de cabecera tienen fontWeight bold', () => {
+		it('las celdas de cabecera tienen fontWeight bold y fondo gris claro', () => {
 			const wb = crearWorkbook();
 			escribirCabecera(wb, ['Fecha', 'Duración']);
 			const fila = wb.rows[0];
-			expect(fila[0]).toMatchObject({ value: 'Fecha', fontWeight: 'bold' });
+			expect(fila[0]).toMatchObject({
+				value: 'Fecha',
+				fontWeight: 'bold',
+				backgroundColor: '#e5e7eb'
+			});
 			expect(fila[1]).toMatchObject({ value: 'Duración', fontWeight: 'bold' });
 		});
+	});
 
-		it('las celdas de cabecera tienen fondo gris claro', () => {
-			const wb = crearWorkbook();
-			escribirCabecera(wb, ['Fecha']);
-			expect(wb.rows[0][0]).toMatchObject({ backgroundColor: '#e5e7eb' });
+	describe('celdaTotalDia', () => {
+		it('devuelve null cuando el valor es null', () => {
+			expect(celdaTotalDia(null)).toBeNull();
+		});
+
+		it('devuelve Cell numérica con format 0.0', () => {
+			const cell = celdaTotalDia(8.5);
+			expect(cell).toMatchObject({ value: 8.5, type: Number, format: '0.0' });
+		});
+	});
+
+	describe('celdaBalanceDiario', () => {
+		it('devuelve null cuando el valor es null', () => {
+			expect(celdaBalanceDiario(null)).toBeNull();
+		});
+
+		it('devuelve Cell con textColor verde y formato con signo para valores >= 0', () => {
+			const cell = celdaBalanceDiario(0.5);
+			expect(cell).toMatchObject({
+				value: 0.5,
+				type: Number,
+				fontWeight: 'bold',
+				textColor: '#16a34a',
+				format: '+0.0;-0.0;0.0'
+			});
+		});
+
+		it('devuelve Cell con textColor rojo para valores < 0', () => {
+			const cell = celdaBalanceDiario(-0.5);
+			expect(cell).toMatchObject({
+				value: -0.5,
+				type: Number,
+				fontWeight: 'bold',
+				textColor: '#dc2626'
+			});
+		});
+
+		it('texto verde para el cero (no es negativo)', () => {
+			const cell = celdaBalanceDiario(0);
+			expect(cell).toMatchObject({ textColor: '#16a34a' });
 		});
 	});
 
 	describe('escribirFila', () => {
 		it('añade una fila de datos normal', () => {
 			const wb = crearWorkbook();
-			escribirFila(wb, ['01/06/2026', '08:00', '12:00', '4,0', null]);
+			escribirFila(wb, ['01/06/2026', '08:00', '12:00', '04:00', null]);
 			expect(wb.rows).toHaveLength(1);
-			expect(wb.rows[0]).toEqual(['01/06/2026', '08:00', '12:00', '4,0', null]);
+			expect(wb.rows[0]).toEqual(['01/06/2026', '08:00', '12:00', '04:00', null]);
 		});
 
 		it('permite valores numéricos', () => {
 			const wb = crearWorkbook();
-			escribirFila(wb, ['01/06/2026', '08:00', '12:00', 4.0, null]);
-			expect(wb.rows[0][3]).toBe(4.0);
+			escribirFila(wb, ['01/06/2026', '08:00', '12:00', '04:00', 8.0]);
+			expect(wb.rows[0][4]).toBe(8.0);
 		});
 
 		it('permite null para celdas vacías', () => {
 			const wb = crearWorkbook();
-			escribirFila(wb, ['01/06/2026', '08:00', '12:00', '4,0', null]);
+			escribirFila(wb, ['01/06/2026', '08:00', '12:00', '04:00', null]);
 			expect(wb.rows[0][4]).toBeNull();
+		});
+
+		it('acepta Cell objects para estilo por celda', () => {
+			const wb = crearWorkbook();
+			const cell = { value: 8.0, type: Number, format: '0.0' } as const;
+			escribirFila(wb, ['01/06/2026', '08:00', '12:00', '04:00', cell]);
+			expect(wb.rows[0][4]).toMatchObject({ value: 8.0, type: Number });
 		});
 	});
 
-	describe('escribirFilaResumen', () => {
-		it('añade una fila de resumen con texto de total', () => {
+	describe('escribirFilaNumerica', () => {
+		it('añade una fila donde cada número se convierte en Cell con type:Number y format:0.0', () => {
 			const wb = crearWorkbook();
-			escribirCabecera(wb, ['Fecha', 'Entrada', 'Salida', 'Duración', 'Total día']);
-			escribirFilaResumen(wb, '40,5h');
-			expect(wb.rows).toHaveLength(2);
-			const resumen = wb.rows[1];
-			// La columna Duración (índice 3) contiene el texto
-			expect(resumen[3]).toMatchObject({ value: '40,5h' });
+			escribirFilaNumerica(wb, [8.0, 0.5, null]);
+			expect(wb.rows).toHaveLength(1);
+			expect(wb.rows[0][0]).toMatchObject({ value: 8.0, type: Number, format: '0.0' });
+			expect(wb.rows[0][1]).toMatchObject({ value: 0.5, type: Number, format: '0.0' });
+			expect(wb.rows[0][2]).toBeNull();
+		});
+	});
+
+	describe('escribirFilaTotal', () => {
+		it('añade una fila con etiqueta "TOTAL" en la primera celda', () => {
+			const wb = crearWorkbook();
+			escribirFilaTotal(wb, 40.5, 5, 4);
+			const total = wb.rows[0];
+			expect(total[0]).toMatchObject({ value: 'TOTAL', fontWeight: 'bold' });
 		});
 
-		it('incluye el balance si se proporciona', () => {
+		it('el valor numérico va en columnaTotalIdx con type:Number y format:0.0', () => {
 			const wb = crearWorkbook();
-			escribirCabecera(wb, ['Fecha', 'Entrada', 'Salida', 'Duración', 'Total día']);
-			escribirFilaResumen(wb, '40,5h', '+2,5h');
-			const resumen = wb.rows[1];
-			expect(resumen[3]).toMatchObject({ value: '40,5h | Balance: +2,5h' });
+			escribirFilaTotal(wb, 40.5, 5, 4);
+			const total = wb.rows[0];
+			expect(total[4]).toMatchObject({
+				value: 40.5,
+				type: Number,
+				fontWeight: 'bold',
+				format: '0.0'
+			});
 		});
 
-		it('la fila de resumen tiene fondo gris claro', () => {
+		it('todas las celdas tienen topBorderStyle thick', () => {
 			const wb = crearWorkbook();
-			escribirCabecera(wb, ['Fecha', 'Entrada', 'Salida', 'Duración', 'Total día']);
-			escribirFilaResumen(wb, '40,5h');
-			const resumen = wb.rows[1];
-			expect(resumen[0]).toMatchObject({ backgroundColor: '#f3f4f6' });
-			expect(resumen[3]).toMatchObject({ backgroundColor: '#f3f4f6' });
+			escribirFilaTotal(wb, 40.5, 5, 4);
+			const total = wb.rows[0];
+			for (const cell of total) {
+				expect(cell).toMatchObject({ topBorderStyle: 'thick' });
+			}
 		});
 
-		it('la fila de resumen tiene borde superior (topBorderStyle thin)', () => {
+		it('el fontSize de la fila TOTAL es mayor (14pt) que el base (10pt)', () => {
 			const wb = crearWorkbook();
-			escribirCabecera(wb, ['Fecha', 'Entrada', 'Salida', 'Duración', 'Total día']);
-			escribirFilaResumen(wb, '40,5h');
-			const resumen = wb.rows[1];
-			expect(resumen[0]).toMatchObject({ topBorderStyle: 'thin' });
-			expect(resumen[3]).toMatchObject({ topBorderStyle: 'thin' });
+			escribirFilaTotal(wb, 40.5, 5, 4);
+			const total = wb.rows[0];
+			expect(total[0]).toMatchObject({ fontSize: 14 });
+			expect(total[4]).toMatchObject({ fontSize: 14 });
 		});
 
-		it('las celdas vacías de resumen también tienen estilo', () => {
+		it('el resto de celdas están vacías pero con borde grueso', () => {
 			const wb = crearWorkbook();
-			escribirCabecera(wb, ['Fecha', 'Entrada', 'Salida', 'Duración', 'Total día']);
-			escribirFilaResumen(wb, '40,5h');
-			const resumen = wb.rows[1];
-			// Celdas vacías (Fecha, Entrada, Salida, Total día) tienen fondo y borde
-			expect(resumen[0]).toMatchObject({ backgroundColor: '#f3f4f6', topBorderStyle: 'thin' });
-			expect(resumen[1]).toMatchObject({ backgroundColor: '#f3f4f6', topBorderStyle: 'thin' });
-			expect(resumen[2]).toMatchObject({ backgroundColor: '#f3f4f6', topBorderStyle: 'thin' });
-			expect(resumen[4]).toMatchObject({ backgroundColor: '#f3f4f6', topBorderStyle: 'thin' });
-		});
-
-		it('rellena columnas extra con estilo cuando numColumnas > 5', () => {
-			const wb = crearWorkbook();
-			// Con contrato: 6 columnas
-			escribirCabecera(wb, [
-				'Fecha',
-				'Entrada',
-				'Salida',
-				'Duración',
-				'Total día',
-				'Balance diario'
-			]);
-			escribirFilaResumen(wb, '40,5h', '+2,5h');
-			const resumen = wb.rows[1];
-			// 6 columnas en total
-			expect(resumen).toHaveLength(6);
-			expect(resumen[5]).toMatchObject({ backgroundColor: '#f3f4f6', topBorderStyle: 'thin' });
+			escribirFilaTotal(wb, 40.5, 6, 5);
+			const total = wb.rows[0];
+			// celdas 1,2,3 están vacías (solo borde)
+			expect(total[1]).toEqual({ topBorderStyle: 'thick' });
+			expect(total[2]).toEqual({ topBorderStyle: 'thick' });
+			expect(total[3]).toEqual({ topBorderStyle: 'thick' });
 		});
 	});
 
@@ -169,11 +204,62 @@ describe('excel-wrapper', () => {
 		});
 	});
 
+	describe('escribirColumnaTotalSemana', () => {
+		it('añade una Cell para la 7ª columna al final de la última fila', () => {
+			const wb = crearWorkbook();
+			escribirFila(wb, ['01/06/2026', '08:00', '12:00', '04:00', 8.0, 0.5]);
+			escribirColumnaTotalSemana(wb, 40.0);
+			expect(wb.rows[0]).toHaveLength(7);
+			expect(wb.rows[0][6]).toMatchObject({
+				value: 40.0,
+				type: Number,
+				fontWeight: 'bold',
+				fontSize: 14,
+				textColor: '#000000',
+				backgroundColor: '#bbf7d0'
+			});
+		});
+
+		it('fondo verde pastel para valor >= 0', () => {
+			const wb = crearWorkbook();
+			escribirFila(wb, ['01/06/2026', '08:00', '12:00', '04:00', 8.0, 0.5]);
+			escribirColumnaTotalSemana(wb, 40.0);
+			expect(wb.rows[0][6]).toMatchObject({ backgroundColor: '#bbf7d0' });
+		});
+
+		it('fondo rojo pastel para valor < 0', () => {
+			const wb = crearWorkbook();
+			escribirFila(wb, ['01/06/2026', '08:00', '12:00', '04:00', 8.0, -0.5]);
+			escribirColumnaTotalSemana(wb, -1.0);
+			expect(wb.rows[0][6]).toMatchObject({ backgroundColor: '#fecaca' });
+		});
+
+		it('fontSize es 14 (4pt mayor que Balance diario)', () => {
+			const wb = crearWorkbook();
+			escribirFila(wb, ['01/06/2026', '08:00', '12:00', '04:00', 8.0, 0.5]);
+			escribirColumnaTotalSemana(wb, 40.0);
+			expect(wb.rows[0][6]).toMatchObject({ fontSize: 14 });
+		});
+
+		it('añade null si el valor es null', () => {
+			const wb = crearWorkbook();
+			escribirFila(wb, ['01/06/2026', '08:00', '12:00', '04:00', 8.0, 0.5]);
+			escribirColumnaTotalSemana(wb, null);
+			expect(wb.rows[0]).toHaveLength(7);
+			expect(wb.rows[0][6]).toBeNull();
+		});
+
+		it('no hace nada si el workbook está vacío', () => {
+			const wb = crearWorkbook();
+			escribirColumnaTotalSemana(wb, 40.0);
+			expect(wb.rows).toHaveLength(0);
+		});
+	});
+
 	describe('guardarFichero', () => {
 		it('no hace nada si el workbook está vacío', async () => {
 			const wb = crearWorkbook();
 			await guardarFichero(wb, 'test.xlsx');
-			// writeXlsxFile no debería llamarse con workbook vacío
 			expect(mockWriteXlsxFile).not.toHaveBeenCalled();
 			expect(mockToFile).not.toHaveBeenCalled();
 		});
@@ -181,16 +267,14 @@ describe('excel-wrapper', () => {
 		it('llama a write-excel-file con las filas acumuladas y luego a toFile con el nombre', async () => {
 			const wb = crearWorkbook();
 			escribirCabecera(wb, ['Fecha', 'Duración']);
-			escribirFila(wb, ['01/06/2026', '8,0']);
+			escribirFila(wb, ['01/06/2026', '04:00']);
 
 			await guardarFichero(wb, 'jornadas_20260627.xlsx');
 
-			// writeXlsxFile se llama con las filas y la configuración de hoja
 			expect(mockWriteXlsxFile).toHaveBeenCalledWith(
 				expect.any(Array),
 				expect.objectContaining({ sheet: 'Jornadas' })
 			);
-			// toFile se llama con el nombre del fichero
 			expect(mockToFile).toHaveBeenCalledWith('jornadas_20260627.xlsx');
 		});
 

@@ -1,82 +1,125 @@
 import type { Cell, SheetData } from 'write-excel-file/browser';
 
-/**
- * Estado interno del workbook: filas acumuladas, nombre de hoja y nº de
- * columnas de la cabecera (para que la fila resumen ocupe todo el ancho).
- */
+/** Estado interno del workbook: filas acumuladas y nombre de hoja. */
 export interface Workbook {
 	rows: SheetData;
 	sheetName: string;
-	numColumnas: number;
 }
 
 const HOJA_POR_DEFECTO = 'Jornadas';
 const FONDO_CABECERA = '#e5e7eb';
-const FONDO_RESUMEN = '#f3f4f6';
+const TAMANO_FUENTE_BASE = 10;
+const TAMANO_FUENTE_TOTAL = 14;
+const COLOR_ROJO = '#dc2626';
+const COLOR_VERDE = '#16a34a';
+const COLOR_ROJO_PASTEL = '#fecaca';
+const COLOR_VERDE_PASTEL = '#bbf7d0';
 
-function celdaCabecera(texto: string): Cell {
-	return { value: texto, type: String, fontWeight: 'bold', backgroundColor: FONDO_CABECERA };
+/** Celda numérica para "Total día" (horas decimales). `null` = celda vacía. */
+export function celdaTotalDia(horas: number | null): Cell | null {
+	return horas === null ? null : { value: horas, type: Number, format: '0.0' };
 }
 
-function celdaResumenVacia(): Cell {
-	return { backgroundColor: FONDO_RESUMEN, topBorderStyle: 'thin' };
-}
-
-function celdaResumenValor(texto: string): Cell {
+/** Celda numérica para "Balance diario": negrita + rojo si < 0, verde si >= 0. */
+export function celdaBalanceDiario(balance: number | null): Cell | null {
+	if (balance === null) return null;
 	return {
-		value: texto,
-		type: String,
-		backgroundColor: FONDO_RESUMEN,
-		topBorderStyle: 'thin'
+		value: balance,
+		type: Number,
+		fontWeight: 'bold',
+		fontSize: TAMANO_FUENTE_BASE,
+		textColor: balance < 0 ? COLOR_ROJO : COLOR_VERDE,
+		format: '+0.0;-0.0;0.0'
 	};
 }
 
-/** Inicializa un workbook vacío con la hoja por defecto. */
+/** Celda numérica para "Total semana" (7ª col): negrita, +4pt, fondo pastel. */
+function celdaTotalSemana(horas: number | null): Cell | null {
+	if (horas === null) return null;
+	return {
+		value: horas,
+		type: Number,
+		fontWeight: 'bold',
+		fontSize: TAMANO_FUENTE_TOTAL,
+		textColor: '#000000',
+		backgroundColor: horas < 0 ? COLOR_ROJO_PASTEL : COLOR_VERDE_PASTEL,
+		format: '0.0'
+	};
+}
+
 export function crearWorkbook(): Workbook {
-	return { rows: [], sheetName: HOJA_POR_DEFECTO, numColumnas: 0 };
+	return { rows: [], sheetName: HOJA_POR_DEFECTO };
 }
 
-/** Añade la fila de cabecera (negrita, fondo gris claro) con los nombres dados. */
 export function escribirCabecera(workbook: Workbook, columnas: string[]): void {
-	workbook.numColumnas = columnas.length;
-	workbook.rows.push(columnas.map(celdaCabecera));
+	workbook.rows.push(
+		columnas.map((texto) => ({
+			value: texto,
+			type: String,
+			fontWeight: 'bold',
+			backgroundColor: FONDO_CABECERA
+		}))
+	);
 }
 
-/** Añade una fila de datos normal. `null` representa celda vacía. */
-export function escribirFila(workbook: Workbook, datos: Array<string | number | null>): void {
+export function escribirFila(
+	workbook: Workbook,
+	datos: Array<Cell | string | number | null>
+): void {
 	workbook.rows.push(datos as SheetData[number]);
 }
 
-/**
- * Añade una fila de resumen: celdas vacías en Fecha/Entrada/Salida/Total día,
- * y `total` (opcionalmente seguido de ` | Balance: balance`) en Duración.
- * Fondo gris claro y borde superior la distinguen visualmente. Si el
- * workbook tiene más columnas (Balance diario), también las rellena vacías
- * con el mismo estilo para mantener la coherencia visual.
- */
-export function escribirFilaResumen(workbook: Workbook, total: string, balance?: string): void {
-	const texto = balance !== undefined ? `${total} | Balance: ${balance}` : total;
-	const celdas: Cell[] = [
-		celdaResumenVacia(),
-		celdaResumenVacia(),
-		celdaResumenVacia(),
-		celdaResumenValor(texto),
-		celdaResumenVacia()
-	];
-	while (celdas.length < workbook.numColumnas) celdas.push(celdaResumenVacia());
-	workbook.rows.push(celdas);
+/** Añade una fila de celdas numéricas (cada número → Cell con type:Number, format:0.0). */
+export function escribirFilaNumerica(workbook: Workbook, datos: Array<number | null>): void {
+	workbook.rows.push(
+		datos.map((v) => (v === null ? null : { value: v, type: Number, format: '0.0' }))
+	);
 }
 
-/** Añade una fila vacía como separador visual entre sub-periodos. */
+/** Fila TOTAL: "TOTAL" en 1ª celda, valor numérico en `columnaTotalIdx`, borde grueso arriba, negrita y fuente mayor. */
+export function escribirFilaTotal(
+	workbook: Workbook,
+	totalHoras: number,
+	numColumnas: number,
+	columnaTotalIdx: number
+): void {
+	const cells: Cell[] = [];
+	for (let i = 0; i < numColumnas; i++) {
+		if (i === 0) {
+			cells.push({
+				value: 'TOTAL',
+				fontWeight: 'bold',
+				fontSize: TAMANO_FUENTE_TOTAL,
+				topBorderStyle: 'thick'
+			});
+		} else if (i === columnaTotalIdx) {
+			cells.push({
+				value: totalHoras,
+				type: Number,
+				fontWeight: 'bold',
+				fontSize: TAMANO_FUENTE_TOTAL,
+				topBorderStyle: 'thick',
+				format: '0.0'
+			});
+		} else {
+			cells.push({ topBorderStyle: 'thick' });
+		}
+	}
+	workbook.rows.push(cells);
+}
+
 export function escribirSeparador(workbook: Workbook): void {
 	workbook.rows.push([]);
 }
 
-/**
- * Genera el fichero XLSX y dispara la descarga al navegador.
- * La librería `write-excel-file` se carga con import dinámico para no
- * impactar el bundle inicial. Si el workbook no tiene filas, no se genera.
- */
+/** Añade la celda de la 7ª columna (Total semana) al final de la última fila. */
+export function escribirColumnaTotalSemana(workbook: Workbook, horas: number | null): void {
+	const lastRow = workbook.rows[workbook.rows.length - 1];
+	if (!lastRow) return;
+	lastRow.push(celdaTotalSemana(horas));
+}
+
+/** Genera el fichero XLSX y dispara la descarga. `write-excel-file` se carga con import dinámico. */
 export async function guardarFichero(workbook: Workbook, nombre: string): Promise<void> {
 	if (workbook.rows.length === 0) return;
 	const writeXlsxFile = (await import('write-excel-file/browser')).default;
