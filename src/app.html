@@ -28,7 +28,11 @@
 				gap: 1rem;
 				background: #0f172a;
 				color: #94a3b8;
-				font-family: 'Inter', system-ui, sans-serif;
+				/* system-ui (disponible al instante, sin swap) y line-height fijo: así el
+				   loader no se desplaza cuando el preflight de Tailwind cambia la
+				   line-height de la raíz ni al cargar una webfont. */
+				font-family: system-ui, sans-serif;
+				line-height: 1.5;
 			}
 			/* Pre-aplica el reset del preflight de Tailwind (box-sizing/margin) para
 			   que el loader no "salte" de tamaño cuando cargue app.css. */
