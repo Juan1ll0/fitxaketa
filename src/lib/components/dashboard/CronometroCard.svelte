@@ -7,5 +7,10 @@
 		? 'border-success'
 		: 'border-border'}"
 >
-	<p class="font-mono text-5xl font-bold tabular-nums tracking-wider text-text">{elapsed}</p>
+	<p
+		data-testid="cronometro"
+		class="font-mono text-5xl font-bold tabular-nums tracking-wider text-text"
+	>
+		{elapsed}
+	</p>
 </div>
