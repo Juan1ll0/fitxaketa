@@ -43,5 +43,12 @@
 				<span>Toda la configuración</span><span aria-hidden="true" class="text-text-muted">›</span>
 			</button>
 		</div>
+		<button
+			type="button"
+			onclick={onCerrar}
+			class="min-h-11 rounded-xl border border-border px-4 py-2 font-medium text-text hover:bg-surface-light"
+		>
+			Cancelar
+		</button>
 	</div>
 </dialog>
