@@ -1,46 +1,87 @@
 <script lang="ts">
-	// Placeholder UX (implementación de reset/sync/export/backup diferida).
-	const datos = [
-		{ id: 'sync', label: 'Sincronizar' },
-		{ id: 'export', label: 'Exportar datos' },
-		{ id: 'backup', label: 'Copia de seguridad' }
-	] as const;
-</script>
+	import {
+		resetFabrica,
+		borrarSoloSettings,
+		borrarRango,
+		borrarJornadaPorId
+	} from '$lib/stores/app-state-borrado';
+	import type { SeleccionBorrado } from '$lib/utils/borrado-tipos';
+	import SelectorAlcance from './ajustes/SelectorAlcance.svelte';
+	import ConfirmacionDestructiva from './ajustes/ConfirmacionDestructiva.svelte';
 
-<section class="mt-8" aria-labelledby="acciones-datos">
-	<h2 id="acciones-datos" class="mb-2 px-1 text-sm font-medium text-text-muted">
-		Datos y sincronización
-	</h2>
-	<ul
-		class="divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface-light"
-	>
-		{#each datos as accion (accion.id)}
-			<li>
-				<button
-					type="button"
-					disabled
-					class="flex min-h-12 w-full items-center gap-3 px-4 py-3 text-left text-text opacity-60"
-				>
-					<span class="flex-1">{accion.label}</span>
-					<span class="text-xs text-text-muted">Próximamente</span>
-				</button>
-			</li>
-		{/each}
-	</ul>
-</section>
+	let selectorOpen = $state(false);
+	let confirmOpen = $state(false);
+	let titulo = $state('');
+	let mensaje = $state('');
+	let ejecutar: () => Promise<void> = async () => {};
+
+	function pedirConfirmacion(t: string, m: string, fn: () => Promise<void>): void {
+		titulo = t;
+		mensaje = m;
+		ejecutar = fn;
+		confirmOpen = true;
+	}
+
+	function onReset(): void {
+		pedirConfirmacion(
+			'Reseteo de fábrica',
+			'Se borrarán TODAS las jornadas y la configuración. Esta acción no se puede deshacer.',
+			resetFabrica
+		);
+	}
+
+	function onBorrarSettings(): void {
+		pedirConfirmacion(
+			'Borrar configuración',
+			'Se borrará la configuración y se restaurará la de por defecto. Tus jornadas se conservan.',
+			borrarSoloSettings
+		);
+	}
+
+	function onElegir(sel: SeleccionBorrado): void {
+		selectorOpen = false;
+		if (sel.tipo === 'jornada') {
+			pedirConfirmacion('Borrar jornada', `Se borrará la jornada ${sel.etiqueta}.`, () =>
+				borrarJornadaPorId(sel.id)
+			);
+			return;
+		}
+		const n = sel.conteo === 1 ? 'jornada' : 'jornadas';
+		pedirConfirmacion('Borrar jornadas', `Se borrarán ${sel.conteo} ${n} (${sel.etiqueta}).`, () =>
+			borrarRango(sel.desde, sel.hasta)
+		);
+	}
+
+	async function confirmar(): Promise<void> {
+		await ejecutar();
+		confirmOpen = false;
+	}
+
+	const fila =
+		'flex min-h-12 w-full items-center justify-between gap-3 rounded-xl border border-danger/30 bg-surface-light px-4 py-3 text-left text-danger hover:bg-danger/10';
+</script>
 
 <section class="mt-8" aria-labelledby="acciones-peligro">
 	<h2 id="acciones-peligro" class="mb-2 px-1 text-sm font-medium text-danger">Zona de peligro</h2>
-	<button
-		type="button"
-		disabled
-		aria-haspopup="dialog"
-		class="flex min-h-12 w-full items-center gap-3 rounded-xl border border-danger/30 bg-surface-light px-4 py-3 text-left text-danger opacity-60"
-	>
-		<span class="flex-1">Restablecer y borrar datos</span>
-		<span class="text-xs">Próximamente</span>
-	</button>
-	<p class="mt-2 px-1 text-sm text-text-muted">
-		Borra todos los registros y la configuración. Esta acción no se puede deshacer.
-	</p>
+	<div class="flex flex-col gap-2">
+		<button type="button" class={fila} aria-haspopup="dialog" onclick={() => (selectorOpen = true)}>
+			<span>Borrar jornadas</span><span aria-hidden="true">›</span>
+		</button>
+		<button type="button" class={fila} aria-haspopup="dialog" onclick={onBorrarSettings}>
+			<span>Borrar solo la configuración</span><span aria-hidden="true">›</span>
+		</button>
+		<button type="button" class={fila} aria-haspopup="dialog" onclick={onReset}>
+			<span>Reseteo de fábrica</span><span aria-hidden="true">›</span>
+		</button>
+	</div>
+	<p class="mt-2 px-1 text-sm text-text-muted">El borrado es definitivo: no se puede deshacer.</p>
 </section>
+
+<SelectorAlcance open={selectorOpen} onCerrar={() => (selectorOpen = false)} {onElegir} />
+<ConfirmacionDestructiva
+	open={confirmOpen}
+	{titulo}
+	{mensaje}
+	onConfirmar={confirmar}
+	onCancelar={() => (confirmOpen = false)}
+/>

@@ -12,3 +12,8 @@ export interface PeriodoConDatos {
 	hasta: Date;
 	conteo: number;
 }
+
+/** Alcance elegido en el selector de borrado: un rango temporal o una jornada concreta. */
+export type SeleccionBorrado =
+	| { tipo: 'rango'; desde: Date; hasta: Date; etiqueta: string; conteo: number }
+	| { tipo: 'jornada'; id: number; etiqueta: string };

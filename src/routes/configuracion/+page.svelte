@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { subscribe, getSettings, guardarSettings } from '$lib/stores/app-state';
-	import { settingsActual, historicoCampo } from '$lib/utils/settings';
+	import { settingsActual } from '$lib/utils/settings';
 	import type { Settings } from '$lib/db';
 	import AccionesConfig from '$lib/components/AccionesConfig.svelte';
 
@@ -15,7 +15,6 @@
 	let estado = $state<'idle' | 'loading' | 'error'>('idle');
 
 	let horasDiarias = $derived(diasLaborables > 0 ? horasSemanales / diasLaborables : 0);
-	let historico = $derived(historicoCampo(snapshots, 'horas_semanales'));
 
 	const dias = [
 		{ v: 1, l: 'Lunes' },
@@ -120,20 +119,6 @@
 				</p>
 			{/if}
 		</div>
-
-		{#if historico.length > 1}
-			<section class="mt-6 {cardCls}">
-				<h2 class="mb-2 text-sm font-medium text-text-muted">Histórico de horas semanales</h2>
-				<ul class="text-sm text-text">
-					{#each historico as h (h.desde.getTime())}
-						<li class="flex justify-between border-b border-border py-1 last:border-0">
-							<span>{h.valor}h</span>
-							<span class="text-text-muted">desde {h.desde.toLocaleDateString('es-ES')}</span>
-						</li>
-					{/each}
-				</ul>
-			</section>
-		{/if}
 
 		<AccionesConfig />
 	</div>
