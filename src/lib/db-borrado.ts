@@ -21,6 +21,17 @@ export async function borrarTodosLosSettings(): Promise<void> {
 	await seedSettingsIfEmpty();
 }
 
+/**
+ * Borra el último snapshot de configuración (deshace el último cambio): vuelve a
+ * regir el anterior. Si no queda ninguno, re-siembra el default.
+ */
+export async function borrarUltimoSettings(): Promise<void> {
+	const todos = await db.settings.orderBy('fecha').toArray();
+	const ultimo = todos.at(-1);
+	if (ultimo?.id != null) await db.settings.delete(ultimo.id);
+	await seedSettingsIfEmpty();
+}
+
 /** Reseteo de fábrica: borra jornadas y configuración; re-siembra el default. */
 export async function resetDeFabrica(): Promise<void> {
 	await db.jornadas.clear();

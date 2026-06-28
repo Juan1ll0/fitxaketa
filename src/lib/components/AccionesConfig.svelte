@@ -2,6 +2,7 @@
 	import {
 		resetFabrica,
 		borrarSoloSettings,
+		borrarUltimaConfig,
 		borrarRango,
 		borrarJornadaPorId
 	} from '$lib/stores/app-state-borrado';
@@ -30,10 +31,18 @@
 		);
 	}
 
-	function onBorrarSettings(): void {
+	function onBorrarUltimaConfig(): void {
 		pedirConfirmacion(
-			'Borrar configuración',
-			'Se borrará la configuración y se restaurará la de por defecto. Tus jornadas se conservan.',
+			'Borrar última configuración',
+			'Se eliminará el último cambio de configuración y volverá a regir el anterior. Tus jornadas se conservan.',
+			borrarUltimaConfig
+		);
+	}
+
+	function onBorrarTodaConfig(): void {
+		pedirConfirmacion(
+			'Borrar toda la configuración',
+			'Se borrará toda la configuración y se restaurará la de por defecto. Tus jornadas se conservan.',
 			borrarSoloSettings
 		);
 	}
@@ -67,8 +76,11 @@
 		<button type="button" class={fila} aria-haspopup="dialog" onclick={() => (selectorOpen = true)}>
 			<span>Borrar jornadas</span><span aria-hidden="true">›</span>
 		</button>
-		<button type="button" class={fila} aria-haspopup="dialog" onclick={onBorrarSettings}>
-			<span>Borrar solo la configuración</span><span aria-hidden="true">›</span>
+		<button type="button" class={fila} aria-haspopup="dialog" onclick={onBorrarUltimaConfig}>
+			<span>Borrar última configuración</span><span aria-hidden="true">›</span>
+		</button>
+		<button type="button" class={fila} aria-haspopup="dialog" onclick={onBorrarTodaConfig}>
+			<span>Borrar toda la configuración</span><span aria-hidden="true">›</span>
 		</button>
 		<button type="button" class={fila} aria-haspopup="dialog" onclick={onReset}>
 			<span>Reseteo de fábrica</span><span aria-hidden="true">›</span>

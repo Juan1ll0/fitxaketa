@@ -6,8 +6,20 @@ import {
 	borrarJornadasEnRango,
 	borrarJornada,
 	borrarTodosLosSettings,
+	borrarUltimoSettings,
 	resetDeFabrica
 } from '$lib/db-borrado';
+
+function snapshot(fecha: Date, horas: number) {
+	return {
+		fecha,
+		primer_dia_semana: 1,
+		min_jornada_minutos: 0,
+		horas_semanales: horas,
+		dias_laborables: 5,
+		redondeo_minutos: 0
+	};
+}
 
 async function addJornada(start: Date): Promise<number> {
 	return await db.jornadas.add({
@@ -62,6 +74,25 @@ describe('db-borrado', () => {
 		const settings = await db.settings.toArray();
 		expect(settings).toHaveLength(1);
 		expect(settings[0].horas_semanales).toBe(0); // el snapshot por defecto
+	});
+
+	it('borrarUltimoSettings elimina solo el último snapshot (rige el anterior)', async () => {
+		await db.settings.clear();
+		await db.settings.add(snapshot(new Date(2026, 0, 1), 40));
+		await db.settings.add(snapshot(new Date(2026, 2, 1), 35));
+		await borrarUltimoSettings();
+		const settings = await db.settings.orderBy('fecha').toArray();
+		expect(settings).toHaveLength(1);
+		expect(settings[0].horas_semanales).toBe(40); // vuelve a regir el anterior
+	});
+
+	it('borrarUltimoSettings re-siembra el default si era el único', async () => {
+		await db.settings.clear();
+		await db.settings.add(snapshot(new Date(2026, 0, 1), 40));
+		await borrarUltimoSettings();
+		const settings = await db.settings.toArray();
+		expect(settings).toHaveLength(1);
+		expect(settings[0].horas_semanales).toBe(0);
 	});
 
 	it('resetDeFabrica borra jornadas y settings, y re-siembra el default', async () => {

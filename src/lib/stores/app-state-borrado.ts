@@ -3,6 +3,7 @@ import {
 	borrarJornada,
 	borrarJornadasEnRango,
 	borrarTodosLosSettings,
+	borrarUltimoSettings,
 	resetDeFabrica
 } from '$lib/db-borrado';
 import { stopTimer } from './app-timer';
@@ -34,6 +35,12 @@ export async function borrarJornadaPorId(id: number): Promise<void> {
 
 export async function borrarSoloSettings(): Promise<void> {
 	await borrarTodosLosSettings();
+	await cargarSettings();
+	notificarCambio();
+}
+
+export async function borrarUltimaConfig(): Promise<void> {
+	await borrarUltimoSettings();
 	await cargarSettings();
 	notificarCambio();
 }
