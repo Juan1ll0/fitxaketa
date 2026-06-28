@@ -5,7 +5,8 @@
 		"src/routes/**/+*.{ts,svelte}",
 		"src/app.html",
 		"src/lib/stores/app-state.ts",
-		"src/lib/stores/app-state.svelte.ts"
+		"src/lib/stores/app-state.svelte.ts",
+		"src/lib/stores/app-state-borrado.ts"
 	],
 	"project": ["src/**/*.{ts,svelte}"],
 	"ignoreDependencies": [

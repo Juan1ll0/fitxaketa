@@ -29,7 +29,7 @@ export function setPeriodo(periodo: Periodo): void {
 	notificarCambio();
 }
 
-async function cargarSettings(): Promise<void> {
+export async function cargarSettings(): Promise<void> {
 	appState.settings = await getAllSettings();
 }
 
@@ -65,7 +65,7 @@ function normalizarCoords(coords?: Coords): Coords {
 	return { lat: coords?.lat ?? null, lng: coords?.lng ?? null };
 }
 
-function resetEstadoJornada(): void {
+export function resetEstadoJornada(): void {
 	appState.clockedIn = false;
 	appState.openJornadaId = null;
 	appState.startTime = null;
