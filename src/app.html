@@ -30,7 +30,15 @@
 				color: #94a3b8;
 				font-family: 'Inter', system-ui, sans-serif;
 			}
+			/* Pre-aplica el reset del preflight de Tailwind (box-sizing/margin) para
+			   que el loader no "salte" de tamaño cuando cargue app.css. */
+			#app-loading * {
+				box-sizing: border-box;
+				margin: 0;
+				padding: 0;
+			}
 			#app-loading .spinner {
+				box-sizing: border-box;
 				width: 2.5rem;
 				height: 2.5rem;
 				border: 3px solid #334155;
