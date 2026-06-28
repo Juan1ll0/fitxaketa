@@ -12,10 +12,12 @@
 	// entrada, no solo en Fichar. onMount solo corre en el navegador.
 	onMount(async () => {
 		// Mantiene la pantalla de carga (app.html) hasta que los datos están
-		// cargados, para que la vista aparezca ya poblada (sin flash de estado por
-		// defecto). `finally` garantiza quitarla aunque la carga falle.
+		// cargados Y un mínimo de tiempo, para que se vea de forma consistente en
+		// todas las rutas (si no, en cargas muy rápidas no llega a pintarse) y la
+		// vista aparezca ya poblada. `finally` garantiza quitarla aunque falle.
+		const minimoVisible = new Promise((r) => setTimeout(r, 300));
 		try {
-			await initAppState();
+			await Promise.all([initAppState(), minimoVisible]);
 		} finally {
 			document.getElementById('app-loading')?.remove();
 		}
