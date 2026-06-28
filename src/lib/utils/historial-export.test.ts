@@ -4,47 +4,44 @@
  * Verifica la lógica de exportación de jornadas a XLSX:
  * - Solo cerradas se exportan
  * - Orden ascendente por start_time
- * - Columnas según contrato y periodo (5, 6 o 7)
- * - Fila TOTAL al final
+ * - Columnas según contrato y periodo (5, 6 u 8)
+ * - Fila TOTAL al final con valores en col 5/6/7/8
  * - Nombre de fichero
  * - Sin datos → no se genera
  * - describirPeriodo
  * - generarTitulo (fila 1 con título descriptivo)
+ * - Routing: año → meses, mes → semanas, semana/rango/fecha → sin sub-periodo
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { Jornada, Settings } from '$lib/db';
 import { describirPeriodo, exportarJornadas, generarTitulo } from '$lib/utils/historial-export';
 import type { FiltroTemporal } from '$lib/utils/historial-filtros';
 
-// ─── Mocks ────────────────────────────────────────────────────────────────────
-
-// Mock de excel-wrapper para verificar llamadas
 const {
 	mockCrearWorkbook,
 	mockEscribirCabecera,
 	mockEscribirFilaTotal,
 	mockEscribirTitulo,
 	mockGuardarFichero,
-	mockEscribirAgrupadoPorMes,
-	mockEscribirAgrupadoPorSemana,
-	mockEscribirGlobal,
+	mockEscribirJornadas,
 	mockDeterminarColumnas
 } = vi.hoisted(() => ({
-	mockCrearWorkbook: vi.fn(() => ({
-		rows: [],
-		sheetName: 'Jornadas'
-	})),
+	mockCrearWorkbook: vi.fn(() => ({ rows: [], sheetName: 'Jornadas' })),
 	mockEscribirCabecera: vi.fn(),
 	mockEscribirFilaTotal: vi.fn(),
 	mockEscribirTitulo: vi.fn(),
 	mockGuardarFichero: vi.fn().mockResolvedValue(undefined),
-	mockEscribirAgrupadoPorMes: vi.fn(),
-	mockEscribirAgrupadoPorSemana: vi.fn(),
-	mockEscribirGlobal: vi.fn(),
-	mockDeterminarColumnas: vi.fn((tieneContrato: boolean, tieneTotalSemana: boolean): string[] => {
+	mockEscribirJornadas: vi.fn(),
+	mockDeterminarColumnas: vi.fn((tieneContrato: boolean, subPeriodo: string): string[] => {
 		const cols = ['Fecha', 'Entrada', 'Salida', 'Duración', 'Total día'];
 		if (tieneContrato) cols.push('Balance diario');
-		if (tieneTotalSemana) cols.push('Total semana');
+		if (subPeriodo === 'semana') {
+			cols.push('Total Semana');
+			if (tieneContrato) cols.push('Balance Semana');
+		} else if (subPeriodo === 'mes') {
+			cols.push('Total Mes');
+			if (tieneContrato) cols.push('Balance Mes');
+		}
 		return cols;
 	})
 }));
@@ -59,13 +56,9 @@ vi.mock('$lib/utils/excel-wrapper', () => ({
 
 vi.mock('$lib/utils/historial-export-filas', () => ({
 	determinarColumnas: mockDeterminarColumnas,
-	escribirAgrupadoPorMes: mockEscribirAgrupadoPorMes,
-	escribirAgrupadoPorSemana: mockEscribirAgrupadoPorSemana,
-	escribirGlobal: mockEscribirGlobal,
+	escribirJornadas: mockEscribirJornadas,
 	totalHorasGrupo: vi.fn(() => 40.5)
 }));
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function makeJornada(override: Partial<Jornada> = {}): Jornada {
 	const start = override.start_time ?? new Date('2026-06-22T08:00:00');
@@ -101,8 +94,6 @@ function filtroPeriodo(periodo: 'año' | 'mes' | 'semana', fechaRef: Date): Filt
 	return { tipo: 'periodo', periodo, fechaReferencia: fechaRef };
 }
 
-// ─── Tests ───────────────────────────────────────────────────────────────────
-
 describe('historial-export', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
@@ -111,8 +102,6 @@ describe('historial-export', () => {
 	afterEach(() => {
 		vi.restoreAllMocks();
 	});
-
-	// ── (a) Solo cerradas se exportan ───────────────────────────────────────
 
 	describe('solo cerradas (AC-08)', () => {
 		it('excluye jornadas abiertas de la exportación', async () => {
@@ -141,8 +130,6 @@ describe('historial-export', () => {
 		});
 	});
 
-	// ── (b) Orden ascendente ─────────────────────────────────────────────────
-
 	describe('orden ascendente por start_time (AC-06)', () => {
 		it('ordena las jornadas por start_time ascendente', async () => {
 			const antigua = makeJornada({
@@ -167,8 +154,8 @@ describe('historial-export', () => {
 				filtro: filtroPeriodo('mes', new Date('2026-06-15'))
 			});
 
-			expect(mockEscribirAgrupadoPorSemana).toHaveBeenCalled();
-			const args = mockEscribirAgrupadoPorSemana.mock.calls[0];
+			expect(mockEscribirJornadas).toHaveBeenCalled();
+			const args = mockEscribirJornadas.mock.calls[0];
 			const jornadasArg = args[1] as Jornada[];
 			expect(jornadasArg[0].id).toBe(antigua.id);
 			expect(jornadasArg[1].id).toBe(intermedia.id);
@@ -176,16 +163,14 @@ describe('historial-export', () => {
 		});
 	});
 
-	// ── (c/d/e) Columnas según contrato y periodo ───────────────────────────
-
-	describe('columnas según contrato y periodo (AC-07, AC-13, AC-16)', () => {
-		it('usa 5 columnas sin contrato (cualquier periodo)', async () => {
+	describe('columnas según contrato y periodo (AC-07, AC-13, AC-15, AC-16, AC-19)', () => {
+		it('5 columnas sin contrato, sin sub-periodo (semana)', async () => {
 			const jornada = makeJornada();
 
 			await exportarJornadas({
 				jornadas: [jornada],
 				snapshots: [makeSettings({ horas_semanales: 0 })],
-				filtro: filtroPeriodo('mes', new Date('2026-06-15'))
+				filtro: filtroPeriodo('semana', new Date('2026-06-22'))
 			});
 
 			expect(mockEscribirCabecera).toHaveBeenCalledWith(expect.anything(), [
@@ -197,7 +182,7 @@ describe('historial-export', () => {
 			]);
 		});
 
-		it('usa 6 columnas con contrato y periodo semana', async () => {
+		it('6 columnas con contrato, sin sub-periodo (semana)', async () => {
 			const jornada = makeJornada();
 
 			await exportarJornadas({
@@ -216,7 +201,7 @@ describe('historial-export', () => {
 			]);
 		});
 
-		it('usa 7 columnas con contrato y periodo mes (Total semana)', async () => {
+		it('8 columnas con contrato, mes (Total Semana, Balance Semana)', async () => {
 			const jornada = makeJornada();
 
 			await exportarJornadas({
@@ -232,11 +217,12 @@ describe('historial-export', () => {
 				'Duración',
 				'Total día',
 				'Balance diario',
-				'Total semana'
+				'Total Semana',
+				'Balance Semana'
 			]);
 		});
 
-		it('usa 7 columnas con contrato y periodo año (Total semana)', async () => {
+		it('8 columnas con contrato, año (Total Mes, Balance Mes)', async () => {
 			const jornada = makeJornada();
 
 			await exportarJornadas({
@@ -252,16 +238,17 @@ describe('historial-export', () => {
 				'Duración',
 				'Total día',
 				'Balance diario',
-				'Total semana'
+				'Total Mes',
+				'Balance Mes'
 			]);
 		});
 
-		it('usa 5 columnas con dias_laborables=0 aunque horas_semanales>0', async () => {
+		it('6 columnas sin contrato + mes (Total Semana solo, sin Balance Semana)', async () => {
 			const jornada = makeJornada();
 
 			await exportarJornadas({
 				jornadas: [jornada],
-				snapshots: [makeSettings({ horas_semanales: 37.5, dias_laborables: 0 })],
+				snapshots: [makeSettings({ horas_semanales: 0, dias_laborables: 0 })],
 				filtro: filtroPeriodo('mes', new Date('2026-06-15'))
 			});
 
@@ -270,15 +257,14 @@ describe('historial-export', () => {
 				'Entrada',
 				'Salida',
 				'Duración',
-				'Total día'
+				'Total día',
+				'Total Semana'
 			]);
 		});
 	});
 
-	// ── (f) Routing según periodo y contrato ───────────────────────────────
-
-	describe('routing según periodo y contrato', () => {
-		it('año con contrato → escribirAgrupadoPorSemana (semanas con Total semana)', async () => {
+	describe('routing según periodo (AC-15, AC-16, AC-17)', () => {
+		it('año con contrato → escribirJornadas con subPeriodo "mes"', async () => {
 			const jornada = makeJornada();
 
 			await exportarJornadas({
@@ -287,26 +273,12 @@ describe('historial-export', () => {
 				filtro: filtroPeriodo('año', new Date('2026-06-15'))
 			});
 
-			expect(mockEscribirAgrupadoPorSemana).toHaveBeenCalled();
-			expect(mockEscribirAgrupadoPorMes).not.toHaveBeenCalled();
-			expect(mockEscribirGlobal).not.toHaveBeenCalled();
+			expect(mockEscribirJornadas).toHaveBeenCalled();
+			const ctx = mockEscribirJornadas.mock.calls[0][2] as { subPeriodo: string };
+			expect(ctx.subPeriodo).toBe('mes');
 		});
 
-		it('año sin contrato → escribirGlobal (sin semanas ni Total semana)', async () => {
-			const jornada = makeJornada();
-
-			await exportarJornadas({
-				jornadas: [jornada],
-				snapshots: [makeSettings({ horas_semanales: 0 })],
-				filtro: filtroPeriodo('año', new Date('2026-06-15'))
-			});
-
-			expect(mockEscribirGlobal).toHaveBeenCalled();
-			expect(mockEscribirAgrupadoPorMes).not.toHaveBeenCalled();
-			expect(mockEscribirAgrupadoPorSemana).not.toHaveBeenCalled();
-		});
-
-		it('mes con contrato → escribirAgrupadoPorSemana (semanas con Total semana)', async () => {
+		it('mes con contrato → escribirJornadas con subPeriodo "semana"', async () => {
 			const jornada = makeJornada();
 
 			await exportarJornadas({
@@ -315,25 +287,12 @@ describe('historial-export', () => {
 				filtro: filtroPeriodo('mes', new Date('2026-06-15'))
 			});
 
-			expect(mockEscribirAgrupadoPorSemana).toHaveBeenCalled();
-			expect(mockEscribirAgrupadoPorMes).not.toHaveBeenCalled();
-			expect(mockEscribirGlobal).not.toHaveBeenCalled();
+			expect(mockEscribirJornadas).toHaveBeenCalled();
+			const ctx = mockEscribirJornadas.mock.calls[0][2] as { subPeriodo: string };
+			expect(ctx.subPeriodo).toBe('semana');
 		});
 
-		it('mes sin contrato → escribirGlobal', async () => {
-			const jornada = makeJornada();
-
-			await exportarJornadas({
-				jornadas: [jornada],
-				snapshots: [makeSettings({ horas_semanales: 0 })],
-				filtro: filtroPeriodo('mes', new Date('2026-06-15'))
-			});
-
-			expect(mockEscribirGlobal).toHaveBeenCalled();
-			expect(mockEscribirAgrupadoPorSemana).not.toHaveBeenCalled();
-		});
-
-		it('semana → escribirGlobal (sin Total semana)', async () => {
+		it('semana → escribirJornadas con subPeriodo "ninguno"', async () => {
 			const jornada = makeJornada();
 
 			await exportarJornadas({
@@ -342,11 +301,12 @@ describe('historial-export', () => {
 				filtro: filtroPeriodo('semana', new Date('2026-06-22'))
 			});
 
-			expect(mockEscribirGlobal).toHaveBeenCalled();
-			expect(mockEscribirAgrupadoPorSemana).not.toHaveBeenCalled();
+			expect(mockEscribirJornadas).toHaveBeenCalled();
+			const ctx = mockEscribirJornadas.mock.calls[0][2] as { subPeriodo: string };
+			expect(ctx.subPeriodo).toBe('ninguno');
 		});
 
-		it('fecha → escribirGlobal', async () => {
+		it('fecha → escribirJornadas con subPeriodo "ninguno"', async () => {
 			const jornada = makeJornada();
 
 			await exportarJornadas({
@@ -355,30 +315,28 @@ describe('historial-export', () => {
 				filtro: { tipo: 'fecha', fecha: new Date('2026-06-22') }
 			});
 
-			expect(mockEscribirGlobal).toHaveBeenCalled();
+			expect(mockEscribirJornadas).toHaveBeenCalled();
+			const ctx = mockEscribirJornadas.mock.calls[0][2] as { subPeriodo: string };
+			expect(ctx.subPeriodo).toBe('ninguno');
 		});
 
-		it('rango → escribirGlobal', async () => {
+		it('rango → escribirJornadas con subPeriodo "ninguno"', async () => {
 			const jornada = makeJornada();
 
 			await exportarJornadas({
 				jornadas: [jornada],
 				snapshots: [makeSettings()],
-				filtro: {
-					tipo: 'rango',
-					desde: new Date('2026-06-01'),
-					hasta: new Date('2026-06-15')
-				}
+				filtro: { tipo: 'rango', desde: new Date('2026-06-01'), hasta: new Date('2026-06-15') }
 			});
 
-			expect(mockEscribirGlobal).toHaveBeenCalled();
+			expect(mockEscribirJornadas).toHaveBeenCalled();
+			const ctx = mockEscribirJornadas.mock.calls[0][2] as { subPeriodo: string };
+			expect(ctx.subPeriodo).toBe('ninguno');
 		});
 	});
 
-	// ── (g) Fila TOTAL al final ─────────────────────────────────────────────
-
 	describe('fila TOTAL al final (AC-15, AC-18, AC-19)', () => {
-		it('siempre añade una fila TOTAL al final (con contrato)', async () => {
+		it('siempre añade una fila TOTAL al final (con contrato, mes)', async () => {
 			const jornada = makeJornada();
 
 			await exportarJornadas({
@@ -390,7 +348,38 @@ describe('historial-export', () => {
 			expect(mockEscribirFilaTotal).toHaveBeenCalled();
 		});
 
-		it('siempre añade una fila TOTAL al final (sin contrato)', async () => {
+		it('TOTAL se llama con TotalesFila y numColumnas=8 (contrato + mes)', async () => {
+			const jornada = makeJornada();
+
+			await exportarJornadas({
+				jornadas: [jornada],
+				snapshots: [makeSettings()],
+				filtro: filtroPeriodo('mes', new Date('2026-06-15'))
+			});
+
+			expect(mockEscribirFilaTotal).toHaveBeenCalledWith(
+				expect.anything(),
+				expect.objectContaining({
+					totalDia: expect.any(Number),
+					balanceDiario: expect.any(Number)
+				}),
+				8
+			);
+		});
+
+		it('TOTAL con contrato + año: numColumnas=8', async () => {
+			const jornada = makeJornada();
+
+			await exportarJornadas({
+				jornadas: [jornada],
+				snapshots: [makeSettings()],
+				filtro: filtroPeriodo('año', new Date('2026-06-15'))
+			});
+
+			expect(mockEscribirFilaTotal).toHaveBeenCalledWith(expect.anything(), expect.anything(), 8);
+		});
+
+		it('TOTAL sin contrato: balanceDiario=null, numColumnas=5', async () => {
 			const jornada = makeJornada();
 
 			await exportarJornadas({
@@ -399,47 +388,13 @@ describe('historial-export', () => {
 				filtro: filtroPeriodo('semana', new Date('2026-06-22'))
 			});
 
-			expect(mockEscribirFilaTotal).toHaveBeenCalled();
-		});
-
-		it('TOTAL va en columna Balance diario (índice 5) si hay contrato', async () => {
-			const jornada = makeJornada();
-
-			await exportarJornadas({
-				jornadas: [jornada],
-				snapshots: [makeSettings()],
-				filtro: filtroPeriodo('mes', new Date('2026-06-15'))
-			});
-
-			// columnas = 7, columnaTotalIdx = 5 (Balance diario)
 			expect(mockEscribirFilaTotal).toHaveBeenCalledWith(
 				expect.anything(),
-				expect.any(Number),
-				7,
+				expect.objectContaining({ balanceDiario: null }),
 				5
 			);
 		});
-
-		it('TOTAL va en columna Total día (índice 4) si no hay contrato', async () => {
-			const jornada = makeJornada();
-
-			await exportarJornadas({
-				jornadas: [jornada],
-				snapshots: [makeSettings({ horas_semanales: 0 })],
-				filtro: filtroPeriodo('semana', new Date('2026-06-22'))
-			});
-
-			// columnas = 5, columnaTotalIdx = 4 (Total día)
-			expect(mockEscribirFilaTotal).toHaveBeenCalledWith(
-				expect.anything(),
-				expect.any(Number),
-				5,
-				4
-			);
-		});
 	});
-
-	// ── (h) Nombre de fichero ─────────────────────────────────────────────────
 
 	describe('nombre de fichero (AC-20, AC-22)', () => {
 		it('llama a guardarFichero con nombre que sigue el patrón jornadas_YYYYMMDDHHmmss.xlsx', async () => {
@@ -473,8 +428,6 @@ describe('historial-export', () => {
 		});
 	});
 
-	// ── (i) Sin datos → no se genera ─────────────────────────────────────────
-
 	describe('sin jornadas cerradas (AC-23)', () => {
 		it('no llama a guardarFichero si no hay jornadas cerradas', async () => {
 			await exportarJornadas({
@@ -499,8 +452,6 @@ describe('historial-export', () => {
 			expect(mockGuardarFichero).not.toHaveBeenCalled();
 		});
 	});
-
-	// ── (j) describirPeriodo ─────────────────────────────────────────────────
 
 	describe('describirPeriodo (AC-02)', () => {
 		it('devuelve texto correcto para periodo=año', () => {
@@ -547,8 +498,6 @@ describe('historial-export', () => {
 		});
 	});
 
-	// ── (k) generarTitulo (fila 1 del XLSX, AC-05a) ──────────────────────────
-
 	describe('generarTitulo (AC-05a)', () => {
 		it('"Informe anual - 2026" para periodo=año', () => {
 			const filtro = filtroPeriodo('año', new Date(2026, 5, 15));
@@ -566,8 +515,6 @@ describe('historial-export', () => {
 		});
 
 		it('"Informe personalizado - Semana 25 de junio 2026" para periodo=semana', () => {
-			// 2026-06-17 (miércoles) pertenece a la semana ISO 25 de 2026
-			// (lunes 2026-06-15 a domingo 2026-06-21)
 			const filtro = filtroPeriodo('semana', new Date(2026, 5, 17));
 			expect(generarTitulo(filtro, 1)).toBe('Informe personalizado - Semana 25 de junio 2026');
 		});
@@ -596,21 +543,15 @@ describe('historial-export', () => {
 		});
 
 		it('calcula correctamente el número de semana ISO 2 para el primer lunes de enero 2026', () => {
-			// 2026-01-05 (lunes) inicia la semana ISO 2 de 2026.
-			// La ISO week 1 de 2026 es 2025-12-29 (lun) a 2026-01-04 (dom).
 			const filtro = filtroPeriodo('semana', new Date(2026, 0, 5));
 			expect(generarTitulo(filtro, 1)).toBe('Informe personalizado - Semana 2 de enero 2026');
 		});
 
 		it('el mes/año del título corresponde al inicio de la semana (puede ser mes/año anterior)', () => {
-			// 2024-12-30 (lunes) es la semana ISO 1 de 2025, pero su inicio es
-			// diciembre 2024, por lo que el título muestra ese mes/año.
 			const filtro = filtroPeriodo('semana', new Date(2024, 11, 30));
 			expect(generarTitulo(filtro, 1)).toBe('Informe personalizado - Semana 1 de diciembre 2024');
 		});
 	});
-
-	// ── (l) escribirTitulo se llama como primera operación ─────────────────────
 
 	describe('escribirTitulo se llama como primera operación (AC-05a)', () => {
 		it('se llama exactamente una vez al exportar', async () => {
@@ -623,21 +564,17 @@ describe('historial-export', () => {
 			expect(mockEscribirTitulo).toHaveBeenCalledTimes(1);
 		});
 
-		it('recibe el título generado y el número de columnas', async () => {
+		it('recibe el título generado y el número de columnas (8 para contrato + año)', async () => {
 			const jornada = makeJornada();
 			await exportarJornadas({
 				jornadas: [jornada],
 				snapshots: [makeSettings()],
 				filtro: filtroPeriodo('año', new Date(2026, 5, 15))
 			});
-			expect(mockEscribirTitulo).toHaveBeenCalledWith(
-				expect.anything(),
-				'Informe anual - 2026',
-				7 // 7 columnas con contrato + total semana
-			);
+			expect(mockEscribirTitulo).toHaveBeenCalledWith(expect.anything(), 'Informe anual - 2026', 8);
 		});
 
-		it('se llama con 5 columnas para export sin contrato', async () => {
+		it('se llama con 5 columnas para export sin contrato (semana)', async () => {
 			const jornada = makeJornada();
 			await exportarJornadas({
 				jornadas: [jornada],

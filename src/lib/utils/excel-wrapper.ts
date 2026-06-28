@@ -1,6 +1,11 @@
 import type { Cell, SheetData } from 'write-excel-file/browser';
-import { BORDE_GUIONES, celdaTotalSemana } from './excel-wrapper-celda';
-export { celdaTotalDia, celdaBalanceDiario } from './excel-wrapper-celda';
+import { BORDE_GUIONES } from './excel-wrapper-celda';
+export {
+	celdaBalanceDiario,
+	celdaBalanceSemana,
+	celdaTotalDia,
+	celdaTotalSemana
+} from './excel-wrapper-celda';
 
 export interface Workbook {
 	rows: SheetData;
@@ -12,6 +17,7 @@ const FONDO_CABECERA = '#e5e7eb';
 const TAMANO_FUENTE_TITULO = 16;
 const TAMANO_FUENTE_TOTAL = 14;
 const ALTURA_FILA_TITULO = 24;
+const COLOR_BORDE_INFERIOR = '#000000';
 
 export function crearWorkbook(): Workbook {
 	return { rows: [], sheetName: HOJA_POR_DEFECTO };
@@ -45,69 +51,72 @@ export function escribirCabecera(workbook: Workbook, columnas: string[]): void {
 	);
 }
 
+export interface EscribirFilaOpciones {
+	/** Aplica un borde inferior 2pt sólido negro a toda la fila (separador visual de periodo). */
+	bottomBorder?: boolean;
+}
+
+function conBordeInferior(cell: Cell | string | number | null): Cell {
+	if (cell === null)
+		return { bottomBorderStyle: 'medium', bottomBorderColor: COLOR_BORDE_INFERIOR };
+	if (typeof cell !== 'object')
+		return { value: cell, bottomBorderStyle: 'medium', bottomBorderColor: COLOR_BORDE_INFERIOR };
+	return { ...cell, bottomBorderStyle: 'medium', bottomBorderColor: COLOR_BORDE_INFERIOR };
+}
+
 export function escribirFila(
 	workbook: Workbook,
-	datos: Array<Cell | string | number | null>
+	datos: Array<Cell | string | number | null>,
+	opciones: EscribirFilaOpciones = {}
 ): void {
-	workbook.rows.push(datos as SheetData[number]);
+	const cells = opciones.bottomBorder ? datos.map(conBordeInferior) : datos;
+	workbook.rows.push(cells as SheetData[number]);
 }
 
-/** Añade una fila de celdas numéricas (cada número → Cell con type:Number, format:0.0). */
-export function escribirFilaNumerica(workbook: Workbook, datos: Array<number | null>): void {
-	workbook.rows.push(
-		datos.map((v) => (v === null ? null : { value: v, type: Number, format: '0.0' }))
-	);
+export interface TotalesFila {
+	/** Suma de horas trabajadas (col. 5, siempre presente). */
+	totalDia: number;
+	/** Suma de balances diarios (col. 6) o `null` si no hay contrato. */
+	balanceDiario: number | null;
+	/** Suma de totales de periodo (col. 7) o `null` si no hay sub-periodo. */
+	totalPeriodo: number | null;
+	/** Suma de balances de periodo (col. 8) o `null` si no hay contrato o sub-periodo. */
+	balancePeriodo: number | null;
 }
 
-/** Fila TOTAL: "TOTAL" en 1ª celda, valor numérico en `columnaTotalIdx`, borde grueso arriba, negrita y fuente mayor. */
+function celdaNumeroTotal(value: number, format: string): Cell {
+	return {
+		...BORDE_GUIONES,
+		value,
+		type: Number,
+		fontWeight: 'bold',
+		fontSize: TAMANO_FUENTE_TOTAL,
+		format
+	};
+}
+
+/** Fila TOTAL: "TOTAL" en col. 1, sumatorios en cols 5-8 según disponibilidad, borde superior grueso. */
 export function escribirFilaTotal(
 	workbook: Workbook,
-	totalHoras: number,
-	numColumnas: number,
-	columnaTotalIdx: number
+	totales: TotalesFila,
+	numColumnas: number
 ): void {
-	const cells: Cell[] = [];
-	for (let i = 0; i < numColumnas; i++) {
-		if (i === 0)
-			cells.push({
-				...BORDE_GUIONES,
-				value: 'TOTAL',
-				fontWeight: 'bold',
-				fontSize: TAMANO_FUENTE_TOTAL
-			});
-		else if (i === columnaTotalIdx)
-			cells.push({
-				...BORDE_GUIONES,
-				value: totalHoras,
-				type: Number,
-				fontWeight: 'bold',
-				fontSize: TAMANO_FUENTE_TOTAL,
-				format: '0.0'
-			});
-		else cells.push(BORDE_GUIONES);
-	}
+	const cells: Cell[] = new Array(numColumnas);
+	cells[0] = {
+		...BORDE_GUIONES,
+		value: 'TOTAL',
+		fontWeight: 'bold',
+		fontSize: TAMANO_FUENTE_TOTAL
+	};
+	if (numColumnas > 4) cells[4] = celdaNumeroTotal(totales.totalDia, '0.0');
+	if (numColumnas > 5 && totales.balanceDiario !== null)
+		cells[5] = celdaNumeroTotal(totales.balanceDiario, '+0.0;-0.0;0.0');
+	if (numColumnas > 6 && totales.totalPeriodo !== null)
+		cells[6] = celdaNumeroTotal(totales.totalPeriodo, '0.0');
+	if (numColumnas > 7 && totales.balancePeriodo !== null)
+		cells[7] = celdaNumeroTotal(totales.balancePeriodo, '+0.0;-0.0;0.0');
+	for (let i = 0; i < numColumnas; i++) if (!cells[i]) cells[i] = BORDE_GUIONES;
 	workbook.rows.push(cells);
-}
-
-/** Separador entre periodos: fila con borde inferior 2pt sólido negro, sin contenido; nº de celdas = fila previa. */
-export function escribirSeparador(workbook: Workbook): void {
-	const prev = workbook.rows[workbook.rows.length - 1];
-	if (!prev || prev.length === 0) {
-		workbook.rows.push([]);
-		return;
-	}
-	const cells: Cell[] = [];
-	for (let i = 0; i < prev.length; i++) {
-		cells.push({ bottomBorderStyle: 'medium', bottomBorderColor: '#000000' });
-	}
-	workbook.rows.push(cells);
-}
-
-/** Añade la celda de la 7ª columna (Total semana) al final de la última fila. */
-export function escribirColumnaTotalSemana(workbook: Workbook, horas: number | null): void {
-	const lastRow = workbook.rows[workbook.rows.length - 1];
-	if (!lastRow) return;
-	lastRow.push(celdaTotalSemana(horas));
 }
 
 /** Genera el fichero XLSX y dispara la descarga. `write-excel-file` se carga con import dinámico. */

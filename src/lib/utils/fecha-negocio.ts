@@ -53,3 +53,10 @@ export function inicioSemana(fecha: Date, primerDia: number = PRIMER_DIA_SEMANA)
 	inicio.setDate(inicio.getDate() - diasDesde);
 	return inicio;
 }
+
+/** Inicio (día 1, 00:00 local) del mes que contiene `fecha`. No muta el argumento. */
+export function inicioMes(fecha: Date): Date {
+	const inicio = inicioDia(fecha);
+	inicio.setDate(1);
+	return inicio;
+}
