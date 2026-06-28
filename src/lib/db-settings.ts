@@ -11,9 +11,9 @@ export async function getAllSettings(): Promise<Settings[]> {
 }
 
 /**
- * Siembra un snapshot por defecto (contrato neutro → objetivo 0 → sin exceso)
- * si la tabla está vacía. `fecha` temprana para que `settingsVigente` siempre
- * encuentre uno.
+ * Siembra un snapshot por defecto (contrato 40h/semana en 5 días → objetivo 8h
+ * diarias) si la tabla está vacía. `fecha` temprana para que `settingsVigente`
+ * siempre encuentre uno.
  */
 export async function seedSettingsIfEmpty(): Promise<void> {
 	if ((await db.settings.count()) > 0) return;
@@ -21,7 +21,7 @@ export async function seedSettingsIfEmpty(): Promise<void> {
 		fecha: new Date(2000, 0, 1),
 		primer_dia_semana: 1,
 		min_jornada_minutos: 0,
-		horas_semanales: 0,
+		horas_semanales: 40,
 		dias_laborables: 5,
 		redondeo_minutos: 0
 	});
