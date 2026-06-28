@@ -96,11 +96,6 @@
 				<div class="rounded-xl bg-surface-light p-4">
 					<p class="text-sm text-text-muted">Total horas</p>
 					<p class="text-xl font-bold text-text">{formatearHorasCorto(resumen.totalHoras)}</p>
-					{#if resumen.totalHorasReal !== resumen.totalHoras}
-						<p class="text-xs text-text-muted">
-							Real: {formatearHorasCorto(resumen.totalHorasReal)}
-						</p>
-					{/if}
 				</div>
 				<div class="rounded-xl bg-surface-light p-4">
 					<p class="text-sm text-text-muted">Media diaria</p>
