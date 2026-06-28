@@ -3,8 +3,8 @@
 
 	const tabs = [
 		{ href: '/', label: 'Fichar', icon: 'clock' },
-		{ href: '/historial', label: 'Historial', icon: 'list' },
 		{ href: '/estadisticas', label: 'Estadísticas', icon: 'chart' },
+		{ href: '/historial', label: 'Historial', icon: 'list' },
 		{ href: '/configuracion', label: 'Ajustes', icon: 'settings' }
 	] as const;
 

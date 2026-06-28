@@ -9,7 +9,7 @@
 >
 	<p
 		data-testid="cronometro"
-		class="font-mono text-5xl font-bold tabular-nums tracking-wider text-text"
+		class="font-mono text-6xl font-bold tabular-nums tracking-wider text-text"
 	>
 		{elapsed}
 	</p>

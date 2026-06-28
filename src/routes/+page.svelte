@@ -82,7 +82,7 @@
 		{#if slot.id === 'estado'}
 			<button
 				onclick={handleFichar}
-				class="min-h-11 w-full rounded-xl px-8 py-4 text-lg font-semibold text-white transition-colors"
+				class="min-h-16 w-full rounded-2xl px-8 py-6 text-2xl font-bold text-white transition-colors"
 				class:bg-primary={!clockedIn}
 				class:hover:bg-primary-dark={!clockedIn}
 				class:bg-danger={clockedIn}

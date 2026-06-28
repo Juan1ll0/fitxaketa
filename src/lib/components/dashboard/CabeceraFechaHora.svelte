@@ -9,5 +9,5 @@
 
 <div class="text-center">
 	<p class="text-sm text-text-muted">{fecha}</p>
-	<p class="mt-1 font-mono text-4xl font-semibold tabular-nums text-text">{hora}</p>
+	<p class="mt-1 font-mono text-4xl font-semibold tabular-nums text-text-muted">{hora}</p>
 </div>
