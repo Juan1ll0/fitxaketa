@@ -1,6 +1,6 @@
 # 008 - Ajustes: gestión de datos (borrado y limpieza de acciones)
 
-**Status:** approved
+**Status:** done
 **Creada:** 2026-06-28
 **Autor:** Juan Ignacio
 **Depende de:** [003.5](./003.5-configuracion.md)
@@ -124,18 +124,18 @@ src/lib/stores/app-state.*                   # MODIFICAR: acciones de borrado + 
 
 ## Verificación
 
-| Criterio | Método | Evidencia |
-| --- | --- | --- |
-| Reseteo de fábrica | Con datos, ejecutar reset y confirmar | `jornadas` y `settings` vacías; re-seed default; estado inactivo |
-| Borrar solo config | Ejecutar y revisar Dexie | `settings` solo con snapshot default; jornadas intactas |
-| Borrar 1 año | Datos en 2025 y 2026; borrar 2025 | Solo desaparecen las de 2025 |
-| Borrar 1 mes/semana/día | Borrar cada granularidad | Desaparece exactamente el rango; resto intacto |
-| Solo periodos con datos | Abrir selector con meses vacíos | Los vacíos no aparecen/están deshabilitados |
-| Cruce de medianoche | Jornada 31-dic→1-ene; borrar el año de inicio | Se borra con el año de `start_time` |
-| Borrar 1 jornada | Seleccionar una concreta y borrar | Solo esa desaparece |
-| Confirmación | Cancelar en el bottom sheet | No se borra nada |
-| Reactividad | Borrar y volver a Historial/Estadísticas | Reflejan el borrado sin recargar |
-| Sección datos eliminada | Abrir Ajustes | No aparece "Datos y sincronización" (ni Sync/Export/Backup) |
-| Histórico horas eliminado | Abrir Ajustes con >1 snapshot | No aparece "Histórico de horas semanales" |
-| Tests | `npm run test:unit` y e2e afectados | Verde (borrado, rangos, limpieza) |
-| Type check / lint / size | `npm run check`, `lint`, `size` | Sin errores; dentro de budget |
+| Criterio                  | Método                                        | Evidencia                                                        |
+| ------------------------- | --------------------------------------------- | ---------------------------------------------------------------- |
+| Reseteo de fábrica        | Con datos, ejecutar reset y confirmar         | `jornadas` y `settings` vacías; re-seed default; estado inactivo |
+| Borrar solo config        | Ejecutar y revisar Dexie                      | `settings` solo con snapshot default; jornadas intactas          |
+| Borrar 1 año              | Datos en 2025 y 2026; borrar 2025             | Solo desaparecen las de 2025                                     |
+| Borrar 1 mes/semana/día   | Borrar cada granularidad                      | Desaparece exactamente el rango; resto intacto                   |
+| Solo periodos con datos   | Abrir selector con meses vacíos               | Los vacíos no aparecen/están deshabilitados                      |
+| Cruce de medianoche       | Jornada 31-dic→1-ene; borrar el año de inicio | Se borra con el año de `start_time`                              |
+| Borrar 1 jornada          | Seleccionar una concreta y borrar             | Solo esa desaparece                                              |
+| Confirmación              | Cancelar en el bottom sheet                   | No se borra nada                                                 |
+| Reactividad               | Borrar y volver a Historial/Estadísticas      | Reflejan el borrado sin recargar                                 |
+| Sección datos eliminada   | Abrir Ajustes                                 | No aparece "Datos y sincronización" (ni Sync/Export/Backup)      |
+| Histórico horas eliminado | Abrir Ajustes con >1 snapshot                 | No aparece "Histórico de horas semanales"                        |
+| Tests                     | `npm run test:unit` y e2e afectados           | Verde (borrado, rangos, limpieza)                                |
+| Type check / lint / size  | `npm run check`, `lint`, `size`               | Sin errores; dentro de budget                                    |

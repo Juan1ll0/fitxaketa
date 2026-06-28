@@ -1,5 +1,18 @@
 # MEMORY.md — Decisiones Técnicas
 
+## 2026-06-28 — Feature 008: Ajustes — gestión de datos (borrado + limpieza)
+
+> Implementada y fusionada en `main` (FF local). Spec `done`.
+
+1. **Borrado sin cambio de esquema Dexie.** Los helpers viven en `src/lib/db-borrado.ts` (no en `db.ts`, que ya rozaba el límite de líneas): `borrarJornadasEnRango`, `borrarJornada`, `borrarTodosLosSettings`, `borrarUltimoSettings`, `resetDeFabrica`. El corte por rango usa `db.jornadas.where('start_time').between(...)`, equivalente a cortar por `diaDeJornada` porque la atribución deriva del `start_time` (no se indexa nada nuevo).
+2. **Utils puras de selección** en `src/lib/utils/borrado-periodos.ts` + `borrado-tipos.ts`: `periodosConDatos` lista solo periodos con jornadas (conteo incluido). El conteo se calcula sobre el rango real del periodo (lo que se borrará), no sobre el subconjunto del padre.
+3. **Acciones de store extraídas a `src/lib/stores/app-state-borrado.ts`** (no en `app-state.ts`, que superaba `max-lines` 120 al añadirlas). Para ello se exportaron `cargarSettings` y `resetEstadoJornada` desde `app-state.ts`. El nuevo módulo se añadió a `knip.json` como entry (como los otros `app-state.*`).
+4. **Desviación UX consciente:** el `SelectorAlcance` usa **granularidad → lista plana de periodos con datos**, no el drill-down anidado Año→Mes→… de las Notas técnicas de la spec. Cumple AC-04/05 y es más usable en móvil. El borrado de config usa el mismo patrón de submenú (`SelectorConfig`) con dos opciones: **última** (borra el último snapshot, vuelve a regir el anterior) y **toda** (vacía + resiembra default).
+5. **Formulario de `/configuracion` re-sincroniza por `id` de snapshot vigente** (no flag `seeded` de una sola vez): tras borrar/resetear la config, el form vuelve a los valores correctos sin pisar ediciones en curso.
+6. **Fix global de modales (vinculante):** el preflight de Tailwind v4 aplica `margin: 0` a `*`, anulando el `margin: auto` con que el navegador centra los `<dialog>` modales (salían en una esquina). Se añadió `dialog { margin: auto }` en `src/app.css`. Aplica a TODAS las modales de la app.
+7. **Copia de seguridad: aparcada a spec futura.** Se analizó el mecanismo de entrega y quedó documentado en la spec 008 (§ Fuera de scope): (a) OAuth de cliente con scope `drive.file` (sin verificación de Google, no depende de 004, requiere abrir la app); (b) GAS relé (cliente genera ZIP reutilizando 007, GAS solo guarda; `no-cors` ciego); (c) GAS autónomo (cron server-side, único desatendido y con email, pero reimplementa el Excel y exige sincronizar settings a Sheets). Decisión pendiente para la spec futura.
+8. **knip rojo preexistente (no bloqueante):** el repo tiene ~27 "unused exports" + "unused files" que son falsos positivos (knip no resuelve imports desde `.svelte` ni `type`-only; marca incluso `db`, `diaDeJornada`). No es regresión de 008.
+
 ## 2026-06-23 — Feature 003.6: Paginación temporal en estadísticas (decisiones de implementación)
 
 > Registradas por `@pm` durante el close-feature. La implementación sigue el plan con dos desviaciones justificadas.

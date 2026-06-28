@@ -53,12 +53,15 @@
 			: []
 	);
 	let jornadasOrdenadas = $derived(
-		[...jornadas].sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime())
+		[...jornadas].sort(
+			(a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime()
+		)
 	);
 
 	function etiquetaJornada(j: Jornada): string {
 		const f = new Date(j.start_time);
-		const hora = (d: Date): string => d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+		const hora = (d: Date): string =>
+			d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
 		const fin = j.end_time ? hora(new Date(j.end_time)) : '…';
 		return `${f.toLocaleDateString('es-ES')} · ${hora(f)}–${fin}`;
 	}
@@ -78,8 +81,11 @@
 			<h2 class="text-lg font-semibold">
 				{granularidad ? 'Elige el periodo' : 'Borrar jornadas'}
 			</h2>
-			<button type="button" onclick={onCerrar} aria-label="Cerrar" class="text-text-muted hover:text-text"
-				>✕</button
+			<button
+				type="button"
+				onclick={onCerrar}
+				aria-label="Cerrar"
+				class="text-text-muted hover:text-text">✕</button
 			>
 		</div>
 
@@ -117,10 +123,18 @@
 							type="button"
 							class={filaCls}
 							onclick={() =>
-								onElegir({ tipo: 'rango', desde: p.desde, hasta: p.hasta, etiqueta: p.etiqueta, conteo: p.conteo })}
+								onElegir({
+									tipo: 'rango',
+									desde: p.desde,
+									hasta: p.hasta,
+									etiqueta: p.etiqueta,
+									conteo: p.conteo
+								})}
 						>
 							<span>{p.etiqueta}</span>
-							<span class="text-xs text-text-muted">{p.conteo} {p.conteo === 1 ? 'jornada' : 'jornadas'}</span>
+							<span class="text-xs text-text-muted"
+								>{p.conteo} {p.conteo === 1 ? 'jornada' : 'jornadas'}</span
+							>
 						</button>
 					{:else}
 						<p class="text-sm text-text-muted">No hay jornadas en este alcance.</p>

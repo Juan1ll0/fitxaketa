@@ -11,13 +11,13 @@
 
 ## Resumen de fases
 
-| Fase | Contenido                                       | Implementers          | Paralelizable           |
-| ---- | ----------------------------------------------- | --------------------- | ----------------------- |
-| 1    | Tipos / contratos (alcance de borrado)          | impl-svelte           | — (base de las demás)   |
-| 2    | Lógica: helpers de borrado, utils puras, store  | impl-pwa, impl-svelte | parcial (ver tareas)    |
-| 3    | Componentes Svelte / rutas (Ajustes, diálogos)  | impl-svelte, impl-ui  | parcial (ficheros)      |
-| 4    | UI / estilos (destructivo, a11y)                | impl-ui               | parcial                 |
-| 5    | Tests (un test por AC mínimo)                    | tester                | sí                      |
+| Fase | Contenido                                      | Implementers          | Paralelizable         |
+| ---- | ---------------------------------------------- | --------------------- | --------------------- |
+| 1    | Tipos / contratos (alcance de borrado)         | impl-svelte           | — (base de las demás) |
+| 2    | Lógica: helpers de borrado, utils puras, store | impl-pwa, impl-svelte | parcial (ver tareas)  |
+| 3    | Componentes Svelte / rutas (Ajustes, diálogos) | impl-svelte, impl-ui  | parcial (ficheros)    |
+| 4    | UI / estilos (destructivo, a11y)               | impl-ui               | parcial               |
+| 5    | Tests (un test por AC mínimo)                  | tester                | sí                    |
 
 **Orden:** Fase 1 → Fase 2 → (Fase 3 ∥ Fase 4) → Fase 5.
 **Conteo por implementer:** impl-svelte: 5 · impl-pwa: 1 · impl-ui: 2 · tester: 3 · impl-gas: 0.
@@ -32,7 +32,13 @@
 
 ```ts
 export type Granularidad = 'año' | 'mes' | 'semana' | 'dia' | 'jornada';
-export interface PeriodoConDatos { clave: string; etiqueta: string; desde: Date; hasta: Date; conteo: number }
+export interface PeriodoConDatos {
+	clave: string;
+	etiqueta: string;
+	desde: Date;
+	hasta: Date;
+	conteo: number;
+}
 ```
 
 **ACs:** soporte de tipos para AC-04/05.
@@ -147,12 +153,15 @@ export interface PeriodoConDatos { clave: string; etiqueta: string; desde: Date;
 > Un test por AC mínimo. Colocalizados; `fake-indexeddb/auto` para Dexie. `npm run check` sin errores. Paralelizable entre archivos.
 
 ### T5.1 — `borrado-periodos.test.ts` · `tester`
+
 `periodosConDatos` (solo periodos con datos, conteo, acotado por padre, semana con `primerDia`); `rangoDe` (año/mes/semana/día; cruce de medianoche atribuido por `start_time`).
 
 ### T5.2 — `db.test.ts` (ampliar) · `tester`
+
 `borrarJornadasEnRango` (borra solo el rango, devuelve count), `borrarJornada`, `borrarTodasLasJornadas`, `borrarTodosLosSettings` (+ re-seed), `resetDeFabrica` (jornadas+settings vacías, re-seed un default).
 
 ### T5.3 — `app-state.test.ts` (ampliar) · `tester`
+
 Acciones de borrado recargan jornadas y notifican (AC-13); borrar la jornada abierta resetea el estado activo (AC-12).
 
 **Dependencias:** las utils/store correspondientes. **Paralelizable:** sí.

@@ -30,8 +30,11 @@
 	<div class="flex flex-col gap-3 p-5">
 		<div class="flex items-center justify-between">
 			<h2 class="text-lg font-semibold">Borrar configuración</h2>
-			<button type="button" onclick={onCerrar} aria-label="Cerrar" class="text-text-muted hover:text-text"
-				>✕</button
+			<button
+				type="button"
+				onclick={onCerrar}
+				aria-label="Cerrar"
+				class="text-text-muted hover:text-text">✕</button
 			>
 		</div>
 		<p class="text-sm text-text-muted">¿Qué quieres borrar?</p>
