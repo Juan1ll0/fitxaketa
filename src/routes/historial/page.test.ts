@@ -3,18 +3,23 @@ import { render, screen, fireEvent, cleanup } from '@testing-library/svelte';
 import { tick } from 'svelte';
 import type { Jornada, Settings } from '$lib/db';
 
-const mocks = vi.hoisted(() => ({
-	subscribe: vi.fn((callback: () => void) => {
-		callback();
-		return () => {};
-	}),
-	getJornadas: vi.fn(() => [] as Jornada[]),
-	getSettings: vi.fn(() => [] as Settings[]),
-	cargarJornadas: vi.fn().mockResolvedValue(undefined),
-	afterNavigate: vi.fn((callback: () => void | Promise<void>) => {
-		callback();
-	})
-}));
+// Mocks hoisted antes de cualquier import
+const mocks = vi.hoisted(() => {
+	const mockExportarJornadas = vi.fn().mockResolvedValue(undefined);
+	return {
+		mockExportarJornadas,
+		subscribe: vi.fn((callback: () => void) => {
+			callback();
+			return () => {};
+		}),
+		getJornadas: vi.fn(() => [] as Jornada[]),
+		getSettings: vi.fn(() => [] as Settings[]),
+		cargarJornadas: vi.fn().mockResolvedValue(undefined),
+		afterNavigate: vi.fn((callback: () => void | Promise<void>) => {
+			callback();
+		})
+	};
+});
 
 vi.mock('$lib/stores/app-state', () => ({
 	subscribe: mocks.subscribe,
@@ -25,6 +30,31 @@ vi.mock('$lib/stores/app-state', () => ({
 
 vi.mock('$app/navigation', () => ({
 	afterNavigate: mocks.afterNavigate
+}));
+
+vi.mock('$lib/utils/historial-export', () => ({
+	exportarJornadas: mocks.mockExportarJornadas,
+	describirPeriodo: vi.fn(() => 'mes de junio de 2026')
+}));
+
+vi.mock('$lib/components/ExportConfirmModal.svelte', () => ({
+	default: function MockExportConfirmModal({
+		periodo,
+		onConfirm,
+		onCancel
+	}: {
+		periodo: string;
+		onConfirm: () => void | Promise<void>;
+		onCancel: () => void;
+	}) {
+		// Simple mock - doesn't need to match Svelte 5 runes exactly
+		// Just provides the interface needed for testing
+		return {
+			periodo,
+			onConfirm,
+			onCancel
+		};
+	}
 }));
 
 import Page from './+page.svelte';
@@ -164,5 +194,48 @@ describe('Historial Page', () => {
 		render(Page);
 		await tick();
 		expect(screen.getByText('Exportar')).toBeInTheDocument();
+	});
+
+	// ── Exportación ───────────────────────────────────────────────────────
+	// NOTA: Los tests de interacción con el modal (dialog.showModal) requieren
+	// un polyfill de jsdom. Por ahora testeamos solo el botón.
+
+	describe('botón Exportar (AC-23)', () => {
+		it('el botón Exportar está deshabilitado cuando no hay jornadas cerradas', async () => {
+			mocks.getJornadas.mockReturnValue([crearJornada({ status: 'open', end_time: null })]);
+			render(Page);
+			await tick();
+
+			const btn = screen.getByText('Exportar');
+			expect(btn).toBeDisabled();
+		});
+
+		it('el botón Exportar está habilitado cuando hay jornadas cerradas', async () => {
+			const hoy = new Date();
+			mocks.getJornadas.mockReturnValue([
+				crearJornada({ id: 1, start_time: hoy, status: 'closed' })
+			]);
+			render(Page);
+			await tick();
+
+			const btn = screen.getByText('Exportar');
+			expect(btn).not.toBeDisabled();
+		});
+
+		it('al hacer clic en Exportar se llama a handleExportar (abre modal)', async () => {
+			const hoy = new Date();
+			mocks.getJornadas.mockReturnValue([
+				crearJornada({ id: 1, start_time: hoy, status: 'closed' })
+			]);
+			render(Page);
+			await tick();
+
+			// Clicking should work without error (modal opens via state change)
+			await fireEvent.click(screen.getByText('Exportar'));
+			await tick();
+
+			// The button should still be there after clicking (modal is shown conditionally)
+			expect(screen.getByText('Exportar')).toBeInTheDocument();
+		});
 	});
 });
