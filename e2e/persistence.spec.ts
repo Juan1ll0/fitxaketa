@@ -19,7 +19,7 @@ test.describe('Persistencia del contador de fichaje', () => {
 		await page.goto('/');
 		await expect(stopButton).toBeVisible();
 
-		const elapsed = page.locator('p.font-mono');
+		const elapsed = page.locator('p.font-mono.text-5xl');
 		await expect(elapsed).not.toHaveText('00:00:00');
 	});
 
@@ -34,7 +34,7 @@ test.describe('Persistencia del contador de fichaje', () => {
 
 		await expect(stopButton).toBeVisible();
 
-		const elapsed = page.locator('p.font-mono');
+		const elapsed = page.locator('p.font-mono.text-5xl');
 		await expect(elapsed).not.toHaveText('00:00:00');
 	});
 
@@ -53,7 +53,7 @@ test.describe('Persistencia del contador de fichaje', () => {
 		const newStopButton = newPage.getByRole('button', { name: /Fichar salida/i });
 		await expect(newStopButton).toBeVisible();
 
-		const elapsed = newPage.locator('p.font-mono');
+		const elapsed = newPage.locator('p.font-mono.text-5xl');
 		await expect(elapsed).not.toHaveText('00:00:00');
 	});
 
@@ -71,7 +71,7 @@ test.describe('Persistencia del contador de fichaje', () => {
 
 		await expect(newPage.getByRole('button', { name: /Fichar salida/i })).toBeVisible();
 
-		const elapsed = newPage.locator('p.font-mono');
+		const elapsed = newPage.locator('p.font-mono.text-5xl');
 		await expect(elapsed).not.toHaveText('00:00:00');
 	});
 });

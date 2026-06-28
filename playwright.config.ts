@@ -26,6 +26,9 @@ export default defineConfig({
 		command: 'npm run build && npm run preview',
 		port: 4173,
 		reuseExistingServer: !process.env.CI,
-		timeout: 120_000
+		timeout: 120_000,
+		// Fuerza http en el preview (los certs locales activarían https y romperían
+		// la baseURL http de arriba). Ver `E2E_HTTP` en vite.config.ts.
+		env: { E2E_HTTP: '1' }
 	}
 });

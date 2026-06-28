@@ -11,8 +11,11 @@ import type { ManifestTransform } from 'workbox-build';
 // HTTPS local opcional (mkcert) para probar la PWA en dispositivos físicos (iOS exige
 // contexto seguro para service worker / instalación). Solo se activa si existen los
 // certs en certs/ (gitignored); sin ellos, dev/preview siguen sirviendo por http.
+// `E2E_HTTP` (lo activa Playwright en su webServer) fuerza http aunque existan los
+// certs locales, para que los tests e2e usen el mismo http que CI (sin certs) y no
+// fallen por el desajuste http/https.
 const https =
-	existsSync('certs/dev-key.pem') && existsSync('certs/dev.pem')
+	!process.env.E2E_HTTP && existsSync('certs/dev-key.pem') && existsSync('certs/dev.pem')
 		? { key: readFileSync('certs/dev-key.pem'), cert: readFileSync('certs/dev.pem') }
 		: undefined;
 

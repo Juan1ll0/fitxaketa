@@ -1,5 +1,9 @@
 import { test, expect } from '@playwright/test';
 
+// Viewport del iPhone 12 (390x844). Se fija solo el viewport (no el device
+// completo) porque `isMobile` no está soportado en el proyecto Firefox.
+test.use({ viewport: { width: 390, height: 844 } });
+
 test.describe('iPhone 12 (emulación)', () => {
 	test('debería mostrar el botón de fichaje en viewport móvil', async ({ page }) => {
 		await page.goto('/');
