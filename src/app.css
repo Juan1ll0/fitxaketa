@@ -16,6 +16,13 @@
 	--color-text-muted: #94a3b8;
 }
 
+/* El preflight de Tailwind pone `margin: 0` a todos los elementos, lo que anula
+   el `margin: auto` con el que el navegador centra los <dialog> modales
+   (showModal). Lo restauramos para que las modales salgan centradas. */
+dialog {
+	margin: auto;
+}
+
 @theme {
 	--color-primary: var(--color-primary);
 	--color-primary-dark: var(--color-primary-dark);
