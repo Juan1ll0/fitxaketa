@@ -12,6 +12,8 @@
 	// entrada, no solo en Fichar. onMount solo corre en el navegador.
 	onMount(() => {
 		initAppState();
+		// Quita la pantalla de carga de app.html una vez montado el cliente.
+		document.getElementById('app-loading')?.remove();
 	});
 </script>
 
