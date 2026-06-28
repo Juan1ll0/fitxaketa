@@ -63,7 +63,9 @@ describe('+page.svelte (dashboard 003.8)', () => {
 		mocks.getElapsed.mockReturnValue('01:30:45');
 		subscribeInmediato();
 		render(Page);
-		await waitFor(() => expect(screen.getByText('01:30:45')).toBeInTheDocument());
+		// El cronómetro parte "HH:MM" y ":SS" en dos spans (tamaños distintos);
+		// se comprueba el textContent completo vía el data-testid.
+		await waitFor(() => expect(screen.getByTestId('cronometro')).toHaveTextContent('01:30:45'));
 	});
 
 	it('muestra "Descansando" / "Trabajando" según el estado', async () => {

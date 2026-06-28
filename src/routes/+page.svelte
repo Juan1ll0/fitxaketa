@@ -12,7 +12,7 @@
 	} from '$lib/stores/app-state';
 	import { settingsActual } from '$lib/utils/settings';
 	import { jornadaAbiertaAnterior } from '$lib/utils/dashboard-avisos';
-	import { dashboardLayoutPorDefecto } from '$lib/utils/dashboard-layout';
+	import { dashboardLayoutPorDefecto, type DashboardSlot } from '$lib/utils/dashboard-layout';
 	import type { Jornada, Settings } from '$lib/db';
 	import CabeceraFechaHora from '$lib/components/dashboard/CabeceraFechaHora.svelte';
 	import CronometroCard from '$lib/components/dashboard/CronometroCard.svelte';
@@ -31,6 +31,11 @@
 
 	const minJornada = $derived(settings.length ? settingsActual(settings).min_jornada_minutos : 0);
 	const avisoAnterior = $derived(jornadaAbiertaAnterior(jornadas, ahora));
+
+	// Distribución vertical: cabecera arriba, cronómetro+estado centrados, resto abajo.
+	function slotsDe(ids: DashboardSlot['id'][]): DashboardSlot[] {
+		return dashboardLayoutPorDefecto.filter((s) => ids.includes(s.id) && s.visible);
+	}
 
 	let unsubscribe: (() => void) | null = null;
 	let reloj: ReturnType<typeof setInterval> | null = null;
@@ -61,47 +66,57 @@
 	<title>Fitxaketa</title>
 </svelte:head>
 
-<div class="mx-auto flex min-h-screen w-full max-w-sm flex-col items-center gap-6 px-4 py-8">
-	{#each dashboardLayoutPorDefecto as slot (slot.id)}
-		{#if slot.visible}
-			<div class="w-full">
-				{#if slot.id === 'cabecera' && slot.variante === 'A1'}
-					<CabeceraFechaHora {ahora} />
-				{:else if slot.id === 'cronometro' && slot.variante === 'B1'}
-					<CronometroCard {elapsed} {clockedIn} />
-				{:else if slot.id === 'estado' && slot.variante === 'C1'}
-					<div class="text-center"><EstadoPill {clockedIn} /></div>
-				{:else if slot.id === 'resumen' && slot.variante === 'D1'}
-					<ResumenStatCards {jornadasHoy} {settings} {ahora} />
-				{:else if slot.id === 'contexto' && slot.variante === 'E4'}
-					<AvisoJornadaAbierta jornada={avisoAnterior} />
-				{/if}
-			</div>
-		{/if}
+{#snippet widget(slot: DashboardSlot)}
+	{#if slot.id === 'cabecera' && slot.variante === 'A1'}
+		<CabeceraFechaHora {ahora} />
+	{:else if slot.id === 'cronometro' && slot.variante === 'B1'}
+		<CronometroCard {elapsed} {clockedIn} />
+	{:else if slot.id === 'estado' && slot.variante === 'C1'}
+		<div class="text-center"><EstadoPill {clockedIn} /></div>
+	{:else if slot.id === 'resumen' && slot.variante === 'D1'}
+		<ResumenStatCards {jornadasHoy} {settings} {ahora} />
+	{:else if slot.id === 'contexto' && slot.variante === 'E4'}
+		<AvisoJornadaAbierta jornada={avisoAnterior} />
+	{/if}
+{/snippet}
 
-		{#if slot.id === 'estado'}
-			<button
-				onclick={handleFichar}
-				class="min-h-16 w-full rounded-2xl px-8 py-6 text-2xl font-bold text-white transition-colors"
-				class:bg-primary={!clockedIn}
-				class:hover:bg-primary-dark={!clockedIn}
-				class:bg-danger={clockedIn}
-				class:hover:bg-danger-dark={clockedIn}
-			>
-				{clockedIn ? 'Fichar salida' : 'Fichar entrada'}
-			</button>
-		{/if}
+<div class="mx-auto flex min-h-screen w-full max-w-sm flex-col justify-between gap-6 px-4 py-8">
+	<div class="w-full">
+		{#each slotsDe(['cabecera']) as slot (slot.id)}
+			{@render widget(slot)}
+		{/each}
+	</div>
 
-		{#if slot.id === 'resumen'}
-			<button
-				type="button"
-				onclick={() => (modalAbierta = true)}
-				class="flex min-h-11 items-center gap-1.5 text-sm text-text-muted hover:text-text"
-			>
-				<span class="text-lg leading-none">＋</span> Añadir fichaje
-			</button>
-		{/if}
-	{/each}
+	<div class="flex w-full flex-col items-center gap-6">
+		{#each slotsDe(['cronometro', 'estado']) as slot (slot.id)}
+			<div class="w-full">{@render widget(slot)}</div>
+		{/each}
+	</div>
+
+	<div class="flex w-full flex-col items-center gap-4">
+		<button
+			onclick={handleFichar}
+			class="min-h-16 w-full rounded-2xl px-8 py-6 text-2xl font-bold text-white transition-colors"
+			class:bg-primary={!clockedIn}
+			class:hover:bg-primary-dark={!clockedIn}
+			class:bg-danger={clockedIn}
+			class:hover:bg-danger-dark={clockedIn}
+		>
+			{clockedIn ? 'Fichar salida' : 'Fichar entrada'}
+		</button>
+
+		{#each slotsDe(['resumen', 'contexto']) as slot (slot.id)}
+			<div class="w-full">{@render widget(slot)}</div>
+		{/each}
+
+		<button
+			type="button"
+			onclick={() => (modalAbierta = true)}
+			class="flex min-h-11 items-center gap-1.5 text-sm text-text-muted hover:text-text"
+		>
+			<span class="text-lg leading-none">＋</span> Añadir fichaje
+		</button>
+	</div>
 </div>
 
 <AltaManualModal

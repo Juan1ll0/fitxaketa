@@ -12,6 +12,6 @@
 		: 'border-border'}"
 >
 	<p data-testid="cronometro" class="font-mono font-bold tabular-nums tracking-wider text-text">
-		<span class="text-6xl">{horasMinutos}</span><span class="text-4xl">{segundos}</span>
+		<span class="text-6xl">{horasMinutos}</span><span class="text-3xl">{segundos}</span>
 	</p>
 </div>
