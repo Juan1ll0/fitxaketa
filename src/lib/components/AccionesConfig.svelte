@@ -8,9 +8,11 @@
 	} from '$lib/stores/app-state-borrado';
 	import type { SeleccionBorrado } from '$lib/utils/borrado-tipos';
 	import SelectorAlcance from './ajustes/SelectorAlcance.svelte';
+	import SelectorConfig from './ajustes/SelectorConfig.svelte';
 	import ConfirmacionDestructiva from './ajustes/ConfirmacionDestructiva.svelte';
 
 	let selectorOpen = $state(false);
+	let configOpen = $state(false);
 	let confirmOpen = $state(false);
 	let titulo = $state('');
 	let mensaje = $state('');
@@ -31,15 +33,16 @@
 		);
 	}
 
-	function onBorrarUltimaConfig(): void {
-		pedirConfirmacion(
-			'Borrar última configuración',
-			'Se eliminará el último cambio de configuración y volverá a regir el anterior. Tus jornadas se conservan.',
-			borrarUltimaConfig
-		);
-	}
-
-	function onBorrarTodaConfig(): void {
+	function onElegirConfig(opcion: 'ultima' | 'toda'): void {
+		configOpen = false;
+		if (opcion === 'ultima') {
+			pedirConfirmacion(
+				'Borrar última configuración',
+				'Se eliminará el último cambio de configuración y volverá a regir el anterior. Tus jornadas se conservan.',
+				borrarUltimaConfig
+			);
+			return;
+		}
 		pedirConfirmacion(
 			'Borrar toda la configuración',
 			'Se borrará toda la configuración y se restaurará la de por defecto. Tus jornadas se conservan.',
@@ -76,11 +79,8 @@
 		<button type="button" class={fila} aria-haspopup="dialog" onclick={() => (selectorOpen = true)}>
 			<span>Borrar jornadas</span><span aria-hidden="true">›</span>
 		</button>
-		<button type="button" class={fila} aria-haspopup="dialog" onclick={onBorrarUltimaConfig}>
-			<span>Borrar última configuración</span><span aria-hidden="true">›</span>
-		</button>
-		<button type="button" class={fila} aria-haspopup="dialog" onclick={onBorrarTodaConfig}>
-			<span>Borrar toda la configuración</span><span aria-hidden="true">›</span>
+		<button type="button" class={fila} aria-haspopup="dialog" onclick={() => (configOpen = true)}>
+			<span>Borrar solo la configuración</span><span aria-hidden="true">›</span>
 		</button>
 		<button type="button" class={fila} aria-haspopup="dialog" onclick={onReset}>
 			<span>Reseteo de fábrica</span><span aria-hidden="true">›</span>
@@ -90,6 +90,7 @@
 </section>
 
 <SelectorAlcance open={selectorOpen} onCerrar={() => (selectorOpen = false)} {onElegir} />
+<SelectorConfig open={configOpen} onCerrar={() => (configOpen = false)} onElegir={onElegirConfig} />
 <ConfirmacionDestructiva
 	open={confirmOpen}
 	{titulo}
