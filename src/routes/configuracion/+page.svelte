@@ -5,7 +5,9 @@
 	import AccionesConfig from '$lib/components/AccionesConfig.svelte';
 
 	let snapshots = $state<Settings[]>(getSettings());
-	let seeded = false;
+	// id del snapshot ya volcado al formulario: re-sincroniza si cambia el vigente
+	// (p. ej. tras borrar/resetear la config), sin pisar ediciones en curso.
+	let aplicadoId: number | undefined;
 
 	let primerDia = $state(1);
 	let minJornada = $state(0);
@@ -34,14 +36,15 @@
 	});
 
 	$effect(() => {
-		if (seeded || snapshots.length === 0) return;
+		if (snapshots.length === 0) return;
 		const s = settingsActual(snapshots);
+		if (s.id === aplicadoId) return;
 		primerDia = s.primer_dia_semana;
 		minJornada = s.min_jornada_minutos;
 		horasSemanales = s.horas_semanales;
 		diasLaborables = s.dias_laborables;
 		redondeoMin = s.redondeo_minutos;
-		seeded = true;
+		aplicadoId = s.id;
 	});
 
 	async function guardar() {
