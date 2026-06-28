@@ -80,20 +80,21 @@
 	{/if}
 {/snippet}
 
-<div class="mx-auto flex min-h-screen w-full max-w-sm flex-col justify-between gap-6 px-4 py-8">
-	<div class="w-full">
+<!-- Altura = viewport menos la barra de navegación (5rem ≈ pb-20 del layout), para
+	no introducir scroll. Tres tercios: cronómetro a 1/3 y botón de fichar a 2/3. -->
+<div class="mx-auto flex min-h-[calc(100dvh-5rem)] w-full max-w-sm flex-col px-4">
+	<div class="flex flex-1 flex-col items-center justify-between pt-8">
 		{#each slotsDe(['cabecera']) as slot (slot.id)}
-			{@render widget(slot)}
-		{/each}
-	</div>
-
-	<div class="flex w-full flex-col items-center gap-6">
-		{#each slotsDe(['cronometro', 'estado']) as slot (slot.id)}
 			<div class="w-full">{@render widget(slot)}</div>
 		{/each}
+		<div class="flex w-full flex-col items-center gap-4">
+			{#each slotsDe(['cronometro', 'estado']) as slot (slot.id)}
+				<div class="w-full">{@render widget(slot)}</div>
+			{/each}
+		</div>
 	</div>
 
-	<div class="flex w-full flex-col items-center gap-4">
+	<div class="flex flex-1 flex-col justify-end">
 		<button
 			onclick={handleFichar}
 			class="min-h-16 w-full rounded-2xl px-8 py-6 text-2xl font-bold text-white transition-colors"
@@ -104,11 +105,12 @@
 		>
 			{clockedIn ? 'Fichar salida' : 'Fichar entrada'}
 		</button>
+	</div>
 
+	<div class="flex flex-1 flex-col items-center gap-3 pt-4">
 		{#each slotsDe(['resumen', 'contexto']) as slot (slot.id)}
 			<div class="w-full">{@render widget(slot)}</div>
 		{/each}
-
 		<button
 			type="button"
 			onclick={() => (modalAbierta = true)}
