@@ -21,12 +21,15 @@
 	import AvisoJornadaAbierta from '$lib/components/dashboard/AvisoJornadaAbierta.svelte';
 	import AltaManualModal from '$lib/components/AltaManualModal.svelte';
 
-	let clockedIn = $state(false);
-	let elapsed = $state('00:00:00');
+	// Inicializa desde el store (ya poblado por initAppState) para que, al volver
+	// al dashboard por navegación SPA, el primer render ya muestre los datos
+	// reales y no un instante el estado por defecto.
+	let clockedIn = $state(getClockedIn());
+	let elapsed = $state(getElapsed());
 	let ahora = $state(new Date());
-	let jornadas = $state<Jornada[]>([]);
-	let jornadasHoy = $state<Jornada[]>([]);
-	let settings = $state<Settings[]>([]);
+	let jornadas = $state<Jornada[]>(getJornadas());
+	let jornadasHoy = $state<Jornada[]>(getJornadasHoy());
+	let settings = $state<Settings[]>(getSettings());
 	let modalAbierta = $state(false);
 
 	const minJornada = $derived(settings.length ? settingsActual(settings).min_jornada_minutos : 0);
