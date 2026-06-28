@@ -10,10 +10,15 @@
 
 	// Carga el estado (settings, jornadas, jornada abierta) en cualquier ruta de
 	// entrada, no solo en Fichar. onMount solo corre en el navegador.
-	onMount(() => {
-		initAppState();
-		// Quita la pantalla de carga de app.html una vez montado el cliente.
-		document.getElementById('app-loading')?.remove();
+	onMount(async () => {
+		// Mantiene la pantalla de carga (app.html) hasta que los datos están
+		// cargados, para que la vista aparezca ya poblada (sin flash de estado por
+		// defecto). `finally` garantiza quitarla aunque la carga falle.
+		try {
+			await initAppState();
+		} finally {
+			document.getElementById('app-loading')?.remove();
+		}
 	});
 </script>
 
