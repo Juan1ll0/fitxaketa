@@ -88,8 +88,8 @@
 		</div>
 
 		{#if jornadasFiltradas.length > 0}
-			<div class="mt-6 grid grid-cols-3 gap-4">
-				<div class="row-span-2 flex flex-col justify-center rounded-xl p-4 {cajaBalance}">
+			<div class="mt-6 grid grid-cols-2 gap-4">
+				<div class="col-span-2 rounded-xl p-4 {cajaBalance}">
 					<p class="text-sm text-text-muted">Balance</p>
 					<p class="text-4xl font-bold {textoBalance}">{balanceTexto(resumen.balanceMinutos)}</p>
 				</div>
