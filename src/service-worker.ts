@@ -1,41 +1,58 @@
 /// <reference lib="webworker" />
 import { BackgroundSyncPlugin } from 'workbox-background-sync';
-import { CacheFirst, StaleWhileRevalidate } from 'workbox-strategies';
-import { registerRoute } from 'workbox-routing';
-import { ExpirationPlugin } from 'workbox-expiration';
+import {
+	cleanupOutdatedCaches,
+	createHandlerBoundToURL,
+	precacheAndRoute
+} from 'workbox-precaching';
+import { NavigationRoute, registerRoute } from 'workbox-routing';
+import { StaleWhileRevalidate } from 'workbox-strategies';
 
 declare const self: ServiceWorkerGlobalScope & {
 	__WB_MANIFEST: Array<{ url: string; revision: string | null }>;
 };
+
+// Cachés de versiones anteriores del SW (estrategia runtime previa) que ya no se usan.
+// Las borramos al activar para que un dispositivo con un SW viejo no siga sirviendo
+// contenido obsoleto desde ellas.
+const LEGACY_CACHES = ['app-shell', 'pages'];
 
 self.addEventListener('install', () => {
 	self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
-	event.waitUntil(self.clients.claim());
+	event.waitUntil(
+		(async () => {
+			await Promise.all(LEGACY_CACHES.map((name) => caches.delete(name)));
+			await self.clients.claim();
+		})()
+	);
 });
 
-const manifest = self.__WB_MANIFEST;
+// Precachea el shell de la app (JS, CSS, iconos y el fallback prerenderizado) en
+// `install`. Sin esto, la primera carga no la controla el SW y nada queda cacheado →
+// la PWA no arranca offline. Los chunks dinámicos (chart.js, write-excel-file) se
+// excluyen del manifest en vite.config para no inflar la instalación.
+precacheAndRoute(self.__WB_MANIFEST);
+cleanupOutdatedCaches();
 
-const assetUrls = manifest.map((entry) => entry.url);
+// Fallback de navegación: cualquier ruta (SPA) se sirve desde el shell precacheado (`/`),
+// de modo que la app carga offline en frío y en cualquier pestaña. El router cliente
+// resuelve luego la ruta concreta. Se excluyen las llamadas a la API.
+const navigationHandler = createHandlerBoundToURL('/');
+registerRoute(new NavigationRoute(navigationHandler, { denylist: [/^\/api\//] }));
 
+// Chunks cargados bajo demanda (chart.js, export XLSX…) que no van en el precache:
+// se cachean en runtime al primer uso para que sigan disponibles offline.
 registerRoute(
-	({ request }) => assetUrls.some((url) => request.url.endsWith(url)),
-	new CacheFirst({
-		cacheName: 'app-shell',
-		plugins: [new ExpirationPlugin({ maxEntries: 100 })]
-	})
+	({ request, url }) =>
+		url.origin === self.location.origin &&
+		(request.destination === 'script' || request.destination === 'style'),
+	new StaleWhileRevalidate({ cacheName: 'lazy-chunks' })
 );
 
-registerRoute(
-	({ request }) => request.destination === 'document',
-	new StaleWhileRevalidate({
-		cacheName: 'pages',
-		plugins: [new ExpirationPlugin({ maxEntries: 50 })]
-	})
-);
-
+// API: cola de reintentos offline (se reenvía al recuperar conexión).
 const bgSyncPlugin = new BackgroundSyncPlugin('api-queue', {
 	maxRetentionTime: 24 * 60
 });
@@ -62,5 +79,5 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
 	event.notification.close();
-	event.waitUntil(clients.openWindow('/'));
+	event.waitUntil(self.clients.openWindow('/'));
 });
