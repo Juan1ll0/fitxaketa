@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import adapter from '@sveltejs/adapter-auto';
+import adapter from '@sveltejs/adapter-static';
 import { sveltekit } from '@sveltejs/kit/vite';
 import tailwindcss from '@tailwindcss/vite';
 import { SvelteKitPWA } from '@vite-pwa/sveltekit';
@@ -19,32 +19,44 @@ const https =
 		? { key: readFileSync('certs/dev-key.pem'), cert: readFileSync('certs/dev.pem') }
 		: undefined;
 
+// Librerías cargadas bajo demanda que NO se precachean: solo la pesada de export a
+// Excel (write-excel-file), que es de uso ocasional. Chart.js (gráfica de Estadísticas,
+// pestaña principal) SÍ se precachea para que funcione offline y no dependa de un fetch
+// en runtime — su exclusión provocaba que la gráfica saliera en blanco.
+const LIBS_FUERA_DEL_PRECACHE = [/write-excel-file/];
+
 /**
- * Transformador de manifest de Workbox que excluye del precache los chunks
- * marcados como `isDynamicEntry` en el manifest de Vite. Esto evita que
- * librerías cargadas bajo demanda (write-excel-file, chart.js) se descarguen
- * durante la instalación del Service Worker, reduciendo el coste inicial.
+ * Transformador de manifest de Workbox que (1) excluye del precache los chunks
+ * dinámicos pesados de uso ocasional (ver `LIBS_FUERA_DEL_PRECACHE`) y (2) reescribe
+ * las URLs internas del build (`client/…`, `prerendered/pages/…`) a sus rutas públicas.
+ * Esta reescritura es la que hace vite-pwa por defecto, pero al proveer
+ * `manifestTransforms` propios se reemplaza; sin ella, `precacheAndRoute` intentaría
+ * cachear rutas inexistentes (`/client/…`) y el offline no funcionaría.
  */
-function exclusionesPrecacheDinamicas(): ManifestTransform {
-	return async (manifest) => {
+function ajustesPrecache(): ManifestTransform {
+	return async (entradas) => {
 		const rutaManifest = path.resolve('.svelte-kit/output/client/.vite/manifest.json');
-		if (!existsSync(rutaManifest)) {
-			return { manifest, warnings: [] };
+		const dinamicos = new Set<string>();
+		if (existsSync(rutaManifest)) {
+			const viteManifest = JSON.parse(readFileSync(rutaManifest, 'utf8')) as Record<
+				string,
+				{ file?: string; src?: string; isDynamicEntry?: boolean }
+			>;
+			for (const entrada of Object.values(viteManifest)) {
+				const esPesada = LIBS_FUERA_DEL_PRECACHE.some((re) => re.test(entrada.src ?? ''));
+				if (entrada.isDynamicEntry && entrada.file && esPesada) dinamicos.add(entrada.file);
+			}
 		}
-		const contenido = readFileSync(rutaManifest, 'utf8');
-		const viteManifest = JSON.parse(contenido) as Record<
-			string,
-			{ file?: string; isDynamicEntry?: boolean }
-		>;
-		const dinamicos = new Set(
-			Object.values(viteManifest)
-				.filter((entrada) => entrada.isDynamicEntry && entrada.file)
-				.map((entrada) => entrada.file as string)
-		);
-		return {
-			manifest: manifest.filter((entrada) => !dinamicos.has(entrada.url.replace(/^client\//, ''))),
-			warnings: []
-		};
+		const manifest = entradas
+			.filter((entrada) => !dinamicos.has(entrada.url.replace(/^client\//, '')))
+			.map((entrada) => {
+				const pagina = entrada.url.match(/^prerendered\/pages\/(.+)\.html$/);
+				if (pagina) {
+					return { ...entrada, url: pagina[1] === 'index' ? '/' : `/${pagina[1]}` };
+				}
+				return { ...entrada, url: `/${entrada.url.replace(/^client\//, '')}` };
+			});
+		return { manifest, warnings: [] };
 	};
 }
 
@@ -67,7 +79,10 @@ export default defineConfig({
 				runes: ({ filename }) =>
 					filename.split(/[/\\]/).includes('node_modules') ? undefined : true
 			},
-			adapter: adapter(),
+			// App 100% cliente (todas las rutas ssr=false, datos en IndexedDB) → sitio
+			// estático con fallback SPA. El fallback (200.html) es el shell que el
+			// service worker precachea para que la PWA cargue offline en frío.
+			adapter: adapter({ fallback: '200.html' }),
 			serviceWorker: {
 				register: false
 			}
@@ -106,8 +121,8 @@ export default defineConfig({
 				]
 			},
 			injectManifest: {
-				globPatterns: ['client/**/*.{js,css,ico,png,svg,webp,webmanifest}'],
-				manifestTransforms: [exclusionesPrecacheDinamicas()]
+				globPatterns: ['client/**/*.{js,css,ico,png,svg,webp,webmanifest,html}'],
+				manifestTransforms: [ajustesPrecache()]
 			},
 			devOptions: {
 				enabled: true,
