@@ -34,27 +34,7 @@ vi.mock('$app/navigation', () => ({
 
 vi.mock('$lib/utils/historial-export', () => ({
 	exportarJornadas: mocks.mockExportarJornadas,
-	describirPeriodo: vi.fn(() => 'mes de junio de 2026')
-}));
-
-vi.mock('$lib/components/ExportConfirmModal.svelte', () => ({
-	default: function MockExportConfirmModal({
-		periodo,
-		onConfirm,
-		onCancel
-	}: {
-		periodo: string;
-		onConfirm: () => void | Promise<void>;
-		onCancel: () => void;
-	}) {
-		// Simple mock - doesn't need to match Svelte 5 runes exactly
-		// Just provides the interface needed for testing
-		return {
-			periodo,
-			onConfirm,
-			onCancel
-		};
-	}
+	precargarEscritor: vi.fn(() => Promise.resolve())
 }));
 
 import Page from './+page.svelte';
@@ -77,6 +57,12 @@ function crearJornada(override: Partial<Jornada> = {}): Jornada {
 
 describe('Historial Page', () => {
 	beforeEach(() => {
+		// Reloj fijo a mitad de mes: los tests crean jornadas de "hoy" y "ayer" y el
+		// filtro por defecto es el mes actual; el día 1 de mes, "ayer" cae en el mes
+		// anterior y el test de agrupación fallaría. `shouldAdvanceTime` mantiene
+		// vivos los timers reales para que findBy/waitFor sigan funcionando.
+		vi.useFakeTimers({ shouldAdvanceTime: true });
+		vi.setSystemTime(new Date(2026, 5, 15, 12, 0));
 		vi.clearAllMocks();
 		mocks.getJornadas.mockReturnValue([]);
 		mocks.getSettings.mockReturnValue([]);
@@ -85,6 +71,7 @@ describe('Historial Page', () => {
 
 	afterEach(() => {
 		cleanup();
+		vi.useRealTimers();
 	});
 
 	it('muestra título "Historial"', async () => {
@@ -197,8 +184,8 @@ describe('Historial Page', () => {
 	});
 
 	// ── Exportación ───────────────────────────────────────────────────────
-	// NOTA: Los tests de interacción con el modal (dialog.showModal) requieren
-	// un polyfill de jsdom. Por ahora testeamos solo el botón.
+	// El botón exporta directamente (sin modal de confirmación): el click es el
+	// gesto de usuario que necesita la hoja de compartir nativa en iOS/Safari.
 
 	describe('botón Exportar (AC-23)', () => {
 		it('el botón Exportar está deshabilitado cuando no hay jornadas cerradas', async () => {
@@ -222,7 +209,7 @@ describe('Historial Page', () => {
 			expect(btn).not.toBeDisabled();
 		});
 
-		it('al hacer clic en Exportar se llama a handleExportar (abre modal)', async () => {
+		it('al hacer clic en Exportar se exporta directamente (sin modal)', async () => {
 			const hoy = new Date();
 			mocks.getJornadas.mockReturnValue([
 				crearJornada({ id: 1, start_time: hoy, status: 'closed' })
@@ -230,12 +217,10 @@ describe('Historial Page', () => {
 			render(Page);
 			await tick();
 
-			// Clicking should work without error (modal opens via state change)
 			await fireEvent.click(screen.getByText('Exportar'));
 			await tick();
 
-			// The button should still be there after clicking (modal is shown conditionally)
-			expect(screen.getByText('Exportar')).toBeInTheDocument();
+			expect(mocks.mockExportarJornadas).toHaveBeenCalledTimes(1);
 		});
 	});
 });

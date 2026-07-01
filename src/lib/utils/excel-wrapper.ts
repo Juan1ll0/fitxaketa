@@ -1,5 +1,6 @@
 import type { Cell, SheetData } from 'write-excel-file/browser';
 import { BORDE_GUIONES } from './excel-wrapper-celda';
+import { guardarBlob } from './excel-guardar';
 export {
 	celdaBalanceDiario,
 	celdaBalanceSemana,
@@ -119,10 +120,23 @@ export function escribirFilaTotal(
 	workbook.rows.push(cells);
 }
 
-/** Genera el fichero XLSX y dispara la descarga. `write-excel-file` se carga con import dinámico. */
+/**
+ * Precarga el módulo de escritura XLSX (import dinámico) para que, al exportar,
+ * la generación sea inmediata y no se pierda el gesto de usuario que exige la
+ * hoja de compartir en iOS/Safari. Llamar al entrar en la pantalla de Historial.
+ */
+export function precargarEscritor(): Promise<unknown> {
+	return import('write-excel-file/browser');
+}
+
+/**
+ * Genera el fichero XLSX y abre un diálogo nativo para guardarlo/compartirlo.
+ * `write-excel-file` se carga con import dinámico.
+ */
 export async function guardarFichero(workbook: Workbook, nombre: string): Promise<void> {
 	if (workbook.rows.length === 0) return;
 	const writeXlsxFile = (await import('write-excel-file/browser')).default;
 	const resultado = await writeXlsxFile(workbook.rows, { sheet: workbook.sheetName });
-	await resultado.toFile(nombre);
+	const blob = await resultado.toBlob();
+	await guardarBlob(blob, nombre);
 }

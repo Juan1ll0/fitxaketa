@@ -8,8 +8,7 @@
 	import { agruparPorDia } from '$lib/utils/dashboard';
 	import HistorialFiltros from '$lib/components/HistorialFiltros.svelte';
 	import DiaGroup from '$lib/components/DiaGroup.svelte';
-	import ExportConfirmModal from '$lib/components/ExportConfirmModal.svelte';
-	import { exportarJornadas, describirPeriodo } from '$lib/utils/historial-export';
+	import { exportarJornadas, precargarEscritor } from '$lib/utils/historial-export';
 
 	let jornadas = $state<Jornada[]>([]);
 	let settings = $state<Settings[]>([]);
@@ -19,7 +18,6 @@
 		fechaReferencia: new Date()
 	});
 	let filtroEstado = $state<FiltroEstado>('cerradas');
-	let mostrarModal = $state(false);
 
 	let primerDia = $derived(settingsActual(settings).primer_dia_semana);
 	let jornadasTemporal = $derived(aplicarFiltroTemporal(jornadas, filtroTemporal, primerDia));
@@ -38,24 +36,19 @@
 	afterNavigate(async () => {
 		filtroTemporal = { tipo: 'periodo', periodo: 'mes', fechaReferencia: new Date() };
 		filtroEstado = 'cerradas';
+		// Precarga el escritor XLSX para que al exportar no se pierda el gesto de
+		// usuario que exige la hoja de compartir en iOS/Safari. Es best-effort:
+		// el chunk está excluido del precache, así que sin red falla y se ignora.
+		precargarEscritor().catch(() => {});
 		await cargarJornadas();
 	});
 
-	function handleExportar(): void {
-		mostrarModal = true;
-	}
-
-	async function confirmarExportacion(): Promise<void> {
+	async function handleExportar(): Promise<void> {
 		await exportarJornadas({
 			jornadas: jornadasFiltradas,
 			snapshots: settings,
 			filtro: filtroTemporal
 		});
-		mostrarModal = false;
-	}
-
-	function cancelarExportacion(): void {
-		mostrarModal = false;
 	}
 </script>
 
@@ -117,11 +110,3 @@
 		{/if}
 	</div>
 </div>
-
-{#if mostrarModal}
-	<ExportConfirmModal
-		periodo={describirPeriodo(filtroTemporal, primerDia)}
-		onConfirm={confirmarExportacion}
-		onCancel={cancelarExportacion}
-	/>
-{/if}

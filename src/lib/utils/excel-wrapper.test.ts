@@ -20,8 +20,9 @@ import {
 	type TotalesFila
 } from '$lib/utils/excel-wrapper';
 
-const mockToFile = vi.fn().mockResolvedValue(undefined);
-const mockWriteXlsxFile = vi.fn().mockResolvedValue({ toFile: mockToFile });
+const blobGenerado = new Blob(['xlsx'], { type: 'application/octet-stream' });
+const mockToBlob = vi.fn().mockResolvedValue(blobGenerado);
+const mockWriteXlsxFile = vi.fn().mockResolvedValue({ toBlob: mockToBlob });
 
 vi.mock('write-excel-file/browser', () => ({
 	default: mockWriteXlsxFile
@@ -30,7 +31,9 @@ vi.mock('write-excel-file/browser', () => ({
 describe('excel-wrapper', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
-		mockWriteXlsxFile.mockResolvedValue({ toFile: mockToFile });
+		vi.unstubAllGlobals();
+		mockWriteXlsxFile.mockResolvedValue({ toBlob: mockToBlob });
+		mockToBlob.mockResolvedValue(blobGenerado);
 	});
 
 	describe('crearWorkbook', () => {
@@ -410,35 +413,105 @@ describe('excel-wrapper', () => {
 	});
 
 	describe('guardarFichero', () => {
+		function wbConDatos(): ReturnType<typeof crearWorkbook> {
+			const wb = crearWorkbook();
+			escribirCabecera(wb, ['Fecha', 'Duración']);
+			escribirFila(wb, ['01/06/2026', '04:00']);
+			return wb;
+		}
+
 		it('no hace nada si el workbook está vacío', async () => {
 			const wb = crearWorkbook();
 			await guardarFichero(wb, 'test.xlsx');
 			expect(mockWriteXlsxFile).not.toHaveBeenCalled();
-			expect(mockToFile).not.toHaveBeenCalled();
+			expect(mockToBlob).not.toHaveBeenCalled();
 		});
 
-		it('llama a write-excel-file con las filas acumuladas y luego a toFile con el nombre', async () => {
-			const wb = crearWorkbook();
-			escribirCabecera(wb, ['Fecha', 'Duración']);
-			escribirFila(wb, ['01/06/2026', '04:00']);
+		it('genera el blob con las filas acumuladas en la hoja Jornadas', async () => {
+			vi.stubGlobal('URL', { createObjectURL: vi.fn().mockReturnValue('blob:x'), revokeObjectURL: vi.fn() });
+			vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
 
-			await guardarFichero(wb, 'jornadas_20260627.xlsx');
+			await guardarFichero(wbConDatos(), 'jornadas_20260627.xlsx');
 
 			expect(mockWriteXlsxFile).toHaveBeenCalledWith(
 				expect.any(Array),
 				expect.objectContaining({ sheet: 'Jornadas' })
 			);
-			expect(mockToFile).toHaveBeenCalledWith('jornadas_20260627.xlsx');
+			expect(mockToBlob).toHaveBeenCalled();
 		});
 
-		it('el nombre del fichero se pasa a toFile correctamente', async () => {
-			const wb = crearWorkbook();
-			escribirCabecera(wb, ['Fecha']);
-			escribirFila(wb, ['01/06/2026']);
+		describe('mecanismo de guardado', () => {
+			it('usa showSaveFilePicker cuando está disponible (diálogo "Guardar como")', async () => {
+				const write = vi.fn().mockResolvedValue(undefined);
+				const close = vi.fn().mockResolvedValue(undefined);
+				const showSaveFilePicker = vi
+					.fn()
+					.mockResolvedValue({ createWritable: vi.fn().mockResolvedValue({ write, close }) });
+				vi.stubGlobal('showSaveFilePicker', showSaveFilePicker);
+				const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
 
-			await guardarFichero(wb, 'jornadas_20260627143025.xlsx');
+				await guardarFichero(wbConDatos(), 'jornadas.xlsx');
 
-			expect(mockToFile).toHaveBeenCalledWith('jornadas_20260627143025.xlsx');
+				expect(showSaveFilePicker).toHaveBeenCalledWith(
+					expect.objectContaining({ suggestedName: 'jornadas.xlsx' })
+				);
+				expect(write).toHaveBeenCalledWith(blobGenerado);
+				expect(close).toHaveBeenCalled();
+				expect(click).not.toHaveBeenCalled();
+				click.mockRestore();
+			});
+
+			it('si el usuario cancela el picker no propaga ni cae al fallback', async () => {
+				const showSaveFilePicker = vi
+					.fn()
+					.mockRejectedValue(new DOMException('cancel', 'AbortError'));
+				vi.stubGlobal('showSaveFilePicker', showSaveFilePicker);
+				const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+
+				await expect(guardarFichero(wbConDatos(), 'jornadas.xlsx')).resolves.toBeUndefined();
+				expect(click).not.toHaveBeenCalled();
+				click.mockRestore();
+			});
+
+			it('usa navigator.share con archivo en móvil (sin picker)', async () => {
+				const share = vi.fn().mockResolvedValue(undefined);
+				const canShare = vi.fn().mockReturnValue(true);
+				vi.stubGlobal('navigator', { canShare, share });
+				const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+
+				await guardarFichero(wbConDatos(), 'jornadas.xlsx');
+
+				expect(share).toHaveBeenCalledWith(
+					expect.objectContaining({ title: 'jornadas.xlsx', files: expect.any(Array) })
+				);
+				expect(click).not.toHaveBeenCalled();
+				click.mockRestore();
+			});
+
+			it('si el usuario cancela el share no propaga ni cae al fallback', async () => {
+				const share = vi.fn().mockRejectedValue(new DOMException('cancel', 'AbortError'));
+				vi.stubGlobal('navigator', { canShare: vi.fn().mockReturnValue(true), share });
+				const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+
+				await expect(guardarFichero(wbConDatos(), 'jornadas.xlsx')).resolves.toBeUndefined();
+				expect(click).not.toHaveBeenCalled();
+				click.mockRestore();
+			});
+
+			it('fallback: descarga clásica con ancla cuando no hay picker ni share', async () => {
+				vi.stubGlobal('navigator', { canShare: undefined, share: undefined });
+				const createObjectURL = vi.fn().mockReturnValue('blob:fake');
+				const revokeObjectURL = vi.fn();
+				vi.stubGlobal('URL', { createObjectURL, revokeObjectURL });
+				const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+
+				await guardarFichero(wbConDatos(), 'jornadas.xlsx');
+
+				expect(createObjectURL).toHaveBeenCalledWith(blobGenerado);
+				expect(click).toHaveBeenCalled();
+				expect(revokeObjectURL).toHaveBeenCalledWith('blob:fake');
+				click.mockRestore();
+			});
 		});
 	});
 });
