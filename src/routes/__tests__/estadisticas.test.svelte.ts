@@ -104,6 +104,12 @@ function subscribeConCallbackInmediato(): void {
 
 describe('estadisticas/+page.svelte', () => {
 	beforeEach(() => {
+		// Reloj fijo a mitad de mes: los tests colocan jornadas en "hace N días" y
+		// el filtro por defecto es el mes actual; sin fijar la fecha, el día 1 de
+		// cada mes esas jornadas caen en el mes anterior y quedan fuera del filtro.
+		// `shouldAdvanceTime` deja correr los timers reales para que waitFor funcione.
+		vi.useFakeTimers({ shouldAdvanceTime: true });
+		vi.setSystemTime(new Date(2026, 5, 15, 12, 0));
 		vi.clearAllMocks();
 		mocks.mockGetJornadas.mockReturnValue([]);
 		mocks.mockCargarJornadas.mockResolvedValue(undefined);
@@ -112,6 +118,7 @@ describe('estadisticas/+page.svelte', () => {
 
 	afterEach(() => {
 		cleanup();
+		vi.useRealTimers();
 	});
 
 	// ─── Selector de periodo ───────────────────────────────────────────────

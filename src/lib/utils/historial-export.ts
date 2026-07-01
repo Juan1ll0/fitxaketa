@@ -26,6 +26,7 @@ export interface ExportOptions {
 }
 
 export { describirPeriodo, generarTitulo } from '$lib/utils/historial-export-texto';
+export { precargarEscritor } from '$lib/utils/excel-wrapper';
 
 /**
  * Genera el fichero XLSX con las jornadas cerradas del filtro, ordenadas

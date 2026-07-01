@@ -162,9 +162,10 @@ describe('PeriodoNavegacion.svelte', () => {
 	describe('botones deshabilitados (AC-02, AC-03, AC-13, AC-21)', () => {
 		// AC-02/AC-21: El botón "Siguiente" se deshabilita cuando el periodo es actual
 		it('Siguiente deshabilitado en periodo actual (AC-02, AC-21)', async () => {
-			// Hoy es 17 junio 2026, mes actual = junio 2026
-			const hoyMock = new Date(2026, 5, 17, 12, 0);
-			const ahoraMock = vi.spyOn(Date, 'now').mockReturnValue(hoyMock.getTime());
+			// Hoy es 17 junio 2026, mes actual = junio 2026. Se fija el reloj del
+			// sistema (no solo Date.now) porque el componente usa `new Date()`.
+			vi.useFakeTimers();
+			vi.setSystemTime(new Date(2026, 5, 17, 12, 0));
 
 			try {
 				const { getByLabelText } = renderPeriodoNavegacion({
@@ -176,7 +177,7 @@ describe('PeriodoNavegacion.svelte', () => {
 				expect(siguienteBtn).toBeDisabled();
 				expect(siguienteBtn).toHaveAttribute('aria-disabled', 'true');
 			} finally {
-				ahoraMock.mockRestore();
+				vi.useRealTimers();
 			}
 		});
 

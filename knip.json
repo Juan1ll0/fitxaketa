@@ -9,10 +9,6 @@
 		"src/lib/stores/app-state-borrado.ts"
 	],
 	"project": ["src/**/*.{ts,svelte}"],
-	"ignoreDependencies": [
-		"tailwindcss",
-		"@secretlint/secretlint-rule-preset-recommend",
-		"workbox-build"
-	],
+	"ignoreDependencies": ["tailwindcss", "@secretlint/secretlint-rule-preset-recommend"],
 	"ignoreUnresolved": ["^\\$app/.+"]
 }
