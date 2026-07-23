@@ -1,6 +1,6 @@
 import type { Cell, SheetData } from 'write-excel-file/browser';
 import { BORDE_GUIONES } from './excel-wrapper-celda';
-import { guardarBlob } from './excel-guardar';
+import { guardarBlob } from './guardar-fichero';
 export {
 	celdaBalanceDiario,
 	celdaBalanceSemana,

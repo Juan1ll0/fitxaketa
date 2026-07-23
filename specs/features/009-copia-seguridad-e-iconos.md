@@ -59,7 +59,7 @@ La sección vive en Ajustes (`/configuracion`), **separada de la Zona de peligro
 - [ ] AC-12 (**Reactividad**): tras importar, las vistas (Fichar, Historial, Estadísticas, Ajustes) reflejan los datos nuevos **sin recargar** la app; si había una jornada abierta que ya no existe, el estado vuelve a «sin jornada activa».
 - [ ] AC-13 (**Cancelar**): cancelar la confirmación de importar **no modifica** la base.
 - [ ] AC-14: Exportar → borrar todo (Zona de peligro) → importar el fichero exportado deja la base **equivalente** a la de partida (round-trip íntegro).
-- [ ] AC-15 (**Unificar entrega del Excel**): la exportación a XLSX de Historial (spec 007) pasa a entregar el fichero con el mismo `entregarFichero()` (hoja de compartir en móvil, descarga por enlace como *fallback*) en lugar del `toFile()` de `write-excel-file`. Misma UX de destino que el backup JSON (en iOS, «Guardar en Archivos» y elegir carpeta). No cambia el contenido ni el nombre del XLSX.
+- [ ] AC-15 (**Helper de entrega compartido**): la exportación a XLSX de Historial (spec 007) y la copia JSON usan el **mismo** helper `guardarBlob()` de `guardar-fichero.ts` (generalizado desde `excel-guardar.ts`), parametrizado por `TipoFichero` (`TIPO_XLSX`/`TIPO_JSON`). Misma UX de destino en iOS («Guardar en Archivos» y elegir carpeta). No cambia el contenido ni el nombre del XLSX.
 
 ### Bloque B — Iconos de la app
 
@@ -116,8 +116,8 @@ La sección vive en Ajustes (`/configuracion`), **separada de la Zona de peligro
 ```
 src/lib/utils/backup.ts            # NUEVO (puro): tipos BackupData; serializar(jornadas,settings)→string;
                                    #   parsear(texto)→BackupData (valida + revive fechas). Testable sin DB.
-src/lib/utils/compartir.ts         # NUEVO: entregarFichero(nombre, contenido, mime) → navigator.share({files})
-                                   #   si canShare; si no, descarga por enlace (Blob+anchor). AbortError = no-op.
+src/lib/utils/guardar-fichero.ts   # GENERALIZAR+RENOMBRAR (era excel-guardar.ts): guardarBlob(blob, nombre, tipo)
+                                   #   ya hacía showSaveFilePicker/share/descarga; se parametriza el tipo (XLSX|JSON).
 src/lib/db-backup.ts               # NUEVO: exportarDatos()→BackupData (lee ambas tablas);
                                    #   importarDatos(data) → transacción rw: clear ambas + bulkAdd + seedSettingsIfEmpty.
 src/lib/stores/app-state-backup.ts # NUEVO: exportarCopia() (arma+descarga); importarCopia(texto)
@@ -131,13 +131,13 @@ src/lib/utils/excel-wrapper.ts     # MODIFICAR (AC-15): guardarFichero() delega 
 
 La recarga tras importar reutiliza el patrón de `app-state-borrado.ts`: `stopTimer()`, `resetEstadoJornada()` si procede, `cargarSettings()`, `cargarJornadas()`, `notificarCambio()`.
 
-### Entrega del fichero (export) — divergencia con el XLSX actual
+### Entrega del fichero (export) — helper compartido
 
-Hoy la exportación a Excel (Historial, spec 007) descarga con `guardarFichero()` → `write-excel-file`'s `toFile(nombre)`, que es una **descarga por enlace normal** (va a Descargas, sin selector de carpeta ni hoja de compartir). **No** usa `navigator.share` ni `showSaveFilePicker` (no existen en el proyecto).
+**Corrección respecto al análisis inicial:** al implementar sobre `main` se comprobó que la exportación a Excel (Historial, spec 007) **ya** usa un helper de guardado nativo, `guardarBlob()` en `src/lib/utils/excel-guardar.ts`, con cascada **`showSaveFilePicker` (escritorio «Guardar como») → `navigator.share` (hoja de compartir en móvil) → descarga por enlace**. `write-excel-file` ya se usa vía `toBlob()`, no `toFile()`. Es decir, el Excel **ya comparte**; el supuesto previo («descarga plana, sin share») era de un estado anterior de la rama.
 
-Esta feature introduce un mecanismo **mejor para móvil**: `entregarFichero()` intenta primero `navigator.share({ files })` (hoja de compartir → el usuario elige «Guardar en Archivos» y la carpeta, AirDrop, correo…) y solo cae a la descarga por enlace como *fallback*.
+Por tanto, en vez de crear un helper nuevo, esta feature **generaliza y renombra** ese helper a `src/lib/utils/guardar-fichero.ts` con firma `guardarBlob(blob, nombre, tipo: TipoFichero = TIPO_XLSX)`, donde `TipoFichero` aporta `mime`/`descripcion`/`extensiones` (`TIPO_XLSX`, `TIPO_JSON`). Así **Excel y copia JSON comparten exactamente la misma UX** de guardado/compartir.
 
-> **Decisión tomada (2026-07-23):** se **unifica** también la descarga de Excel (AC-15). `guardarFichero()` (`excel-wrapper.ts`) deja de usar el `toFile()` de `write-excel-file` y pasa a **obtener el Blob** del XLSX (write-excel-file devuelve un Blob si no se le pasa `fileName`) y **entregarlo con `entregarFichero()`**, para que Excel y JSON compartan la misma UX de compartir/guardar en iOS. No cambia el contenido ni el nombre del fichero XLSX.
+> **Decisión (2026-07-23) — ya materializada:** AC-15 = «backup y Excel comparten `guardar-fichero.ts`». `excel-wrapper.ts` pasa a importar `guardarBlob` desde la nueva ruta (sin más cambios: el tipo por defecto es XLSX); el store de backup llama `guardarBlob(blob, nombre, TIPO_JSON)`. No cambia el contenido ni el nombre del XLSX.
 
 ### Iconos — colocación y cableado
 

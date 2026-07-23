@@ -66,16 +66,18 @@ export interface BackupData {
 **ACs:** AC-02, AC-05, AC-08, base de AC-14.
 **Dependencias:** T1.1. **Paralelizable con:** T2.2.
 
-### T2.2 — Helper de entrega (share/descarga) · `impl-pwa`
+### T2.2 — Generalizar el helper de guardado · `impl-pwa`
 
-**Ficheros:** `src/lib/utils/compartir.ts` (NUEVO).
+**Ficheros:** `src/lib/utils/excel-guardar.ts` → **renombrar** a `src/lib/utils/guardar-fichero.ts`.
 
-- `entregarFichero(nombre: string, contenido: string | Blob, mime: string): Promise<void>`:
-  - Construye `File`/`Blob`. Si `navigator.canShare?.({ files: [file] })` → `await navigator.share({ files: [file] })`.
-  - **Fallback**: crear `Blob`, `URL.createObjectURL`, `<a download>` + click + revoke.
-  - `AbortError` / `NotAllowedError` del share → **no-op** (usuario canceló; no descargar por detrás).
+> **Nota (realidad en `main`):** el helper **ya existe** (`guardarBlob`) con cascada `showSaveFilePicker` (escritorio) → `navigator.share` (móvil) → descarga; solo `AbortError` es no-op, `NotAllowedError` cae a descarga. No se crea uno nuevo: se **generaliza** para JSON.
 
-> **Gesto de usuario (iOS):** `navigator.share` exige gesto activo. El consumidor debe minimizar el `await` previo (ver T2.4/Riesgo #3).
+- Añadir `TipoFichero { mime; descripcion; extensiones }` y constantes `TIPO_XLSX`, `TIPO_JSON`.
+- `guardarBlob(blob, nombre, tipo: TipoFichero = TIPO_XLSX)`: usa `tipo` en el `types` del picker y en el `File`. Firma por defecto XLSX → los llamadores de Excel no cambian de comportamiento.
+- Actualizar el import en `excel-wrapper.ts` (`./excel-guardar` → `./guardar-fichero`).
+
+**ACs:** AC-04, AC-05, AC-15.
+**Dependencias:** ninguna. **Paralelizable con:** T2.1, T2.3.
 
 **ACs:** AC-04, AC-05.
 **Dependencias:** ninguna. **Paralelizable con:** T2.1, T2.3.
@@ -128,14 +130,14 @@ export interface BackupData {
 **ACs:** AC-01.
 **Dependencias:** T3.1. **Paralelizable con:** T3.3, Fase 4.
 
-### T3.3 — Unificar la entrega del Excel · `impl-pwa`
+### T3.3 — Excel usa el helper renombrado · `impl-pwa`
 
 **Ficheros:** `src/lib/utils/excel-wrapper.ts`.
 
-- `guardarFichero()` deja de usar `resultado.toFile(nombre)`; en su lugar **obtiene el Blob** del XLSX (write-excel-file/browser devuelve un `Blob` si no se le pasa `fileName`) y lo entrega con `entregarFichero(nombre, blob, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')` (T2.2). Contenido y nombre del XLSX **sin cambios**.
+- `guardarFichero()` ya obtiene el Blob (`resultado.toBlob()`) y llama `guardarBlob(blob, nombre)`; solo cambia el **import** a `./guardar-fichero` (default `TIPO_XLSX`, comportamiento idéntico). El grueso de AC-15 se resuelve en T2.2.
 
 **ACs:** AC-15.
-**Dependencias:** T2.2. **Paralelizable con:** T3.1, T3.2. **Riesgo:** #2 (API del Blob de write-excel-file).
+**Dependencias:** T2.2. **Paralelizable con:** T3.1, T3.2.
 
 ---
 
@@ -207,7 +209,7 @@ DevTools → Manifest (192/512 + maskable, sin errores); favicon de marca; iOS a
 ## Riesgos técnicos
 
 1. **Revivir `Date` al importar.** `JSON.parse` deja strings; hay que mapear `start_time`/`end_time`/`fecha` a `Date` a mano. _Mitigación:_ T5.1 con `end_time: null` y comparación de tipos.
-2. **Blob del XLSX (write-excel-file).** Unificar el Excel exige obtener el `Blob` en vez de `toFile()`. Verificar la API de `write-excel-file/browser` (sin `fileName` → `Blob`). _Mitigación:_ si la versión instalada no lo expone limpio, generar el Blob desde el propio `toFile` interceptado o mantener `toFile` solo para XLSX y documentar la excepción; confirmar en T3.3 antes de cerrar.
+2. **Helper de guardado ya existente (resuelto).** `main` ya trae `guardarBlob` (showSaveFilePicker/share/descarga) y el Excel ya usa `toBlob()`. _Resultado:_ no se crea helper nuevo; se generaliza y renombra a `guardar-fichero.ts` con `TipoFichero`. Test `excel-wrapper.test.ts` (48) sigue verde tras el cambio.
 3. **Gesto de usuario para `navigator.share` (iOS).** Si se hace mucho `await` (leer IndexedDB) antes de `share()`, iOS puede invalidar el gesto → `NotAllowedError`. _Mitigación:_ en `exportarCopia` minimizar el trabajo previo; las lecturas Dexie son rápidas; si diera problemas, preparar el Blob de forma eager. `NotAllowedError` cae al fallback de descarga.
 4. **Peso del precache (iconos).** El glob `client/**/*.png` precachea todo lo de `static/`. _Mitigación:_ el set completo va a `design/app-icons/` (fuera de `static/`); T5.5 valida `size`.
 5. **`knip` (código muerto).** Nuevos exports (`serializar/parsearBackup`, `entregarFichero`, `exportar/importarDatos`, acciones del store) deben tener consumidor. _Mitigación:_ `app-state-backup` lo usa la UI; `npm run knip` al final.

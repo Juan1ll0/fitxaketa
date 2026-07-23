@@ -1,12 +1,10 @@
 import { getOpenJornada } from '$lib/db';
 import { exportarDatos, importarDatos } from '$lib/db-backup';
 import { serializarBackup, parsearBackup } from '$lib/utils/backup';
-import { entregarFichero } from '$lib/utils/compartir';
+import { guardarBlob, TIPO_JSON } from '$lib/utils/guardar-fichero';
 import { stopTimer } from './app-timer';
 import { notificarCambio } from './app-state.svelte';
 import { cargarJornadas, cargarSettings, resetEstadoJornada } from './app-state';
-
-const MIME_JSON = 'application/json';
 
 /** Nombre del fichero: `fitxaketa-backup-YYYYMMDDHHmmss.json` con la hora local actual. */
 function nombreBackup(): string {
@@ -20,7 +18,8 @@ function nombreBackup(): string {
 export async function exportarCopia(): Promise<void> {
 	const { jornadas, settings } = await exportarDatos();
 	const json = serializarBackup(jornadas, settings);
-	await entregarFichero(nombreBackup(), json, MIME_JSON);
+	const blob = new Blob([json], { type: TIPO_JSON.mime });
+	await guardarBlob(blob, nombreBackup(), TIPO_JSON);
 }
 
 /**
