@@ -1,7 +1,6 @@
 <script lang="ts">
 	import '../app.css';
 	import { onMount } from 'svelte';
-	import favicon from '$lib/assets/favicon.svg';
 	import BottomNav from '$lib/components/BottomNav.svelte';
 	import PWAUpdatePrompt from '$lib/components/PWAUpdatePrompt.svelte';
 	import { initAppState } from '$lib/stores/app-state';
@@ -31,7 +30,6 @@
 </script>
 
 <svelte:head>
-	<link rel="icon" href={favicon} />
 	<meta name="theme-color" content="#0f172a" />
 </svelte:head>
 
