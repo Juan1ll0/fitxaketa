@@ -21,6 +21,7 @@
 		)
 	);
 	let enCurso = $derived(jornadas.filter((jornada) => jornada.status === 'open').length);
+	let numFichajes = $derived(jornadas.length);
 	let resumenTexto = $derived(
 		formatearHorasCorto(totalMin / 60) + (enCurso > 0 ? ` · ${enCurso} en curso` : '')
 	);
@@ -40,6 +41,14 @@
 	>
 		<span class="font-medium text-text">{fecha}</span>
 		<div class="flex items-center gap-2">
+			{#if numFichajes > 1}
+				<span
+					class="flex h-5 min-w-5 items-center justify-center rounded-full bg-surface px-1 text-xs font-medium text-text-muted"
+				>
+					{numFichajes}
+				</span>
+				<span class="text-sm text-text-muted">-</span>
+			{/if}
 			<span class="text-sm text-text-muted">{resumenTexto}</span>
 			<svg
 				class="h-5 w-5 text-text-muted transition-transform {expandido ? 'rotate-180' : ''}"
