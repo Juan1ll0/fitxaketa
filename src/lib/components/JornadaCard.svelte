@@ -1,13 +1,13 @@
 <script lang="ts">
 	import type { Jornada, Settings } from '$lib/db';
-	import { formatearHora, formatearDuracion } from '$lib/utils/dashboard';
+	import { formatearHora, formatearHorasCorto } from '$lib/utils/dashboard';
 	import { duracionEfectivaMinutos } from '$lib/utils/redondeo';
 
 	let { jornada, snapshots }: { jornada: Jornada; snapshots: Settings[] } = $props();
 
 	const esAbierta = $derived(jornada.status === 'open');
 	const duracion = $derived(
-		esAbierta ? 'En curso' : formatearDuracion(duracionEfectivaMinutos(jornada, snapshots))
+		esAbierta ? 'En curso' : formatearHorasCorto(duracionEfectivaMinutos(jornada, snapshots) / 60)
 	);
 </script>
 
