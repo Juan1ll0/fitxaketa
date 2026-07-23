@@ -11,13 +11,13 @@
 
 ## Resumen de fases
 
-| Fase | Contenido                                                | Implementers          | Paralelizable          |
-| ---- | -------------------------------------------------------- | --------------------- | ---------------------- |
-| 1    | Contrato del formato de backup (tipos + constantes)      | impl-svelte           | — (base de las demás)  |
-| 2    | Lógica: serializar/parsear, entrega, db-backup, store    | impl-svelte, impl-pwa | parcial (ver tareas)   |
-| 3    | Componentes/rutas (sección Ajustes) + unificar Excel     | impl-ui, impl-svelte, impl-pwa | parcial (ficheros) |
-| 4    | Iconos (assets + manifest + head/layout)                 | impl-pwa, impl-ui     | parcial                |
-| 5    | Tests + verificación (round-trip, entrega, iconos)       | tester                | sí                     |
+| Fase | Contenido                                             | Implementers                   | Paralelizable         |
+| ---- | ----------------------------------------------------- | ------------------------------ | --------------------- |
+| 1    | Contrato del formato de backup (tipos + constantes)   | impl-svelte                    | — (base de las demás) |
+| 2    | Lógica: serializar/parsear, entrega, db-backup, store | impl-svelte, impl-pwa          | parcial (ver tareas)  |
+| 3    | Componentes/rutas (sección Ajustes) + unificar Excel  | impl-ui, impl-svelte, impl-pwa | parcial (ficheros)    |
+| 4    | Iconos (assets + manifest + head/layout)              | impl-pwa, impl-ui              | parcial               |
+| 5    | Tests + verificación (round-trip, entrega, iconos)    | tester                         | sí                    |
 
 **Orden:** Fase 1 → Fase 2 → (Fase 3 ∥ Fase 4) → Fase 5.
 **Commits:** uno por tarea/fase en la rama `feat/009-copia-seguridad-e-iconos` (granularidad por fase, precedente del proyecto).
@@ -77,9 +77,6 @@ export interface BackupData {
 - Actualizar el import en `excel-wrapper.ts` (`./excel-guardar` → `./guardar-fichero`).
 
 **ACs:** AC-04, AC-05, AC-15.
-**Dependencias:** ninguna. **Paralelizable con:** T2.1, T2.3.
-
-**ACs:** AC-04, AC-05.
 **Dependencias:** ninguna. **Paralelizable con:** T2.1, T2.3.
 
 ### T2.3 — Export/import en Dexie · `impl-pwa`

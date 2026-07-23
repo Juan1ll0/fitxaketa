@@ -8,7 +8,7 @@ import type { Jornada, Settings } from '$lib/db';
 
 export const APP_ID = 'fitxaketa';
 /** Versión del FORMATO del fichero (no de la app). Sube si cambia la estructura. */
-export const FORMATO_BACKUP = 1;
+const FORMATO_BACKUP = 1;
 /** Esquema Dexie de origen soportado (ver `src/lib/db.ts`). */
 export const SCHEMA_DEXIE = 4;
 
@@ -46,6 +46,19 @@ export function parsearBackup(texto: string): BackupData {
 	} catch {
 		throw new Error('El fichero no es un JSON válido.');
 	}
+	const obj = validarSobre(crudo);
+	return {
+		app: APP_ID,
+		version: typeof obj.version === 'number' ? obj.version : FORMATO_BACKUP,
+		schema: obj.schema as number,
+		exportado: typeof obj.exportado === 'string' ? obj.exportado : '',
+		jornadas: (obj.jornadas as unknown[]).map(revivirJornada),
+		settings: (obj.settings as unknown[]).map(revivirSettings)
+	};
+}
+
+/** Valida el "sobre" del backup (app, schema, arrays presentes) y devuelve el objeto crudo. */
+function validarSobre(crudo: unknown): Record<string, unknown> {
 	if (typeof crudo !== 'object' || crudo === null) {
 		throw new Error('El fichero no es una copia de Fitxaketa.');
 	}
@@ -59,14 +72,12 @@ export function parsearBackup(texto: string): BackupData {
 	if (!Array.isArray(obj.jornadas) || !Array.isArray(obj.settings)) {
 		throw new Error('La copia está incompleta o dañada.');
 	}
-	return {
-		app: APP_ID,
-		version: typeof obj.version === 'number' ? obj.version : FORMATO_BACKUP,
-		schema: obj.schema,
-		exportado: typeof obj.exportado === 'string' ? obj.exportado : '',
-		jornadas: obj.jornadas.map(revivirJornada),
-		settings: obj.settings.map(revivirSettings)
-	};
+	return obj;
+}
+
+function comoObjeto(fila: unknown, error: string): Record<string, unknown> {
+	if (typeof fila !== 'object' || fila === null) throw new Error(error);
+	return fila as Record<string, unknown>;
 }
 
 function comoFecha(valor: unknown, campo: string): Date {
@@ -75,27 +86,28 @@ function comoFecha(valor: unknown, campo: string): Date {
 	return d;
 }
 
+function numeroONulo(valor: unknown): number | null {
+	return typeof valor === 'number' ? valor : null;
+}
+
 function revivirJornada(fila: unknown): Jornada {
-	if (typeof fila !== 'object' || fila === null) throw new Error('Jornada inválida en la copia.');
-	const j = fila as Record<string, unknown>;
+	const j = comoObjeto(fila, 'Jornada inválida en la copia.');
 	return {
 		id: typeof j.id === 'number' ? j.id : undefined,
 		start_time: comoFecha(j.start_time, 'start_time'),
 		end_time: j.end_time == null ? null : comoFecha(j.end_time, 'end_time'),
-		lat_start: (j.lat_start ?? null) as number | null,
-		lng_start: (j.lng_start ?? null) as number | null,
-		lat_end: (j.lat_end ?? null) as number | null,
-		lng_end: (j.lng_end ?? null) as number | null,
-		duration: (j.duration ?? null) as number | null,
+		lat_start: numeroONulo(j.lat_start),
+		lng_start: numeroONulo(j.lng_start),
+		lat_end: numeroONulo(j.lat_end),
+		lng_end: numeroONulo(j.lng_end),
+		duration: numeroONulo(j.duration),
 		status: j.status === 'open' ? 'open' : 'closed',
 		synced: j.synced === 1 ? 1 : 0
 	};
 }
 
 function revivirSettings(fila: unknown): Settings {
-	if (typeof fila !== 'object' || fila === null)
-		throw new Error('Configuración inválida en la copia.');
-	const s = fila as Record<string, unknown>;
+	const s = comoObjeto(fila, 'Configuración inválida en la copia.');
 	return {
 		id: typeof s.id === 'number' ? s.id : undefined,
 		fecha: comoFecha(s.fecha, 'fecha'),

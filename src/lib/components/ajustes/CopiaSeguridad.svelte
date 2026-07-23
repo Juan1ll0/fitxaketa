@@ -75,7 +75,8 @@
 	<div class="flex flex-col gap-3 rounded-xl bg-surface-light p-4">
 		<p class="text-sm text-text-muted">
 			Guarda todas tus jornadas y tu configuración en un fichero, o restáuralas desde uno. Útil para
-			pasar tus datos a otro dispositivo. La copia no sale del dispositivo salvo que tú la compartas.
+			pasar tus datos a otro dispositivo. La copia no sale del dispositivo salvo que tú la
+			compartas.
 		</p>
 		<div class="flex flex-col gap-2 sm:flex-row">
 			<button

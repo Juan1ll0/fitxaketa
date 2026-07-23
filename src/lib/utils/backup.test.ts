@@ -60,7 +60,12 @@ describe('backup: serializar / parsear', () => {
 	});
 
 	it('rechaza una copia con schema más nuevo (AC-05)', () => {
-		const texto = JSON.stringify({ app: APP_ID, schema: SCHEMA_DEXIE + 1, jornadas: [], settings: [] });
+		const texto = JSON.stringify({
+			app: APP_ID,
+			schema: SCHEMA_DEXIE + 1,
+			jornadas: [],
+			settings: []
+		});
 		expect(() => parsearBackup(texto)).toThrow(/nueva/i);
 	});
 
