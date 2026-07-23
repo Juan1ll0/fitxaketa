@@ -1,4 +1,32 @@
-const MIME_XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+/**
+ * Guarda un Blob con el mejor diálogo nativo disponible, en cascada:
+ * 1. Escritorio Chromium → `showSaveFilePicker` ("Guardar como", elige ruta).
+ * 2. Móvil (Android/iOS) → `navigator.share` con archivo (hoja de compartir → «Guardar
+ *    en Archivos», AirDrop, correo…).
+ * 3. Fallback → descarga clásica con ancla.
+ *
+ * Lo usan tanto la exportación a Excel (Historial) como la copia de seguridad JSON
+ * (Ajustes), para que compartan la misma UX de guardado/compartir.
+ */
+
+export interface TipoFichero {
+	mime: string;
+	/** Descripción y extensiones para el diálogo «Guardar como» de escritorio. */
+	descripcion: string;
+	extensiones: string[];
+}
+
+export const TIPO_XLSX: TipoFichero = {
+	mime: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+	descripcion: 'Excel',
+	extensiones: ['.xlsx']
+};
+
+export const TIPO_JSON: TipoFichero = {
+	mime: 'application/json',
+	descripcion: 'Copia de seguridad',
+	extensiones: ['.json']
+};
 
 /**
  * El usuario canceló el diálogo de guardado/compartir: no es un error real.
@@ -31,20 +59,17 @@ function descargarBlob(blob: Blob, nombre: string): void {
 	URL.revokeObjectURL(url);
 }
 
-/**
- * Guarda el Blob con el mejor diálogo nativo disponible, en cascada:
- * 1. Escritorio Chromium → `showSaveFilePicker` ("Guardar como").
- * 2. Móvil (Android/iOS) → `navigator.share` con archivo (hoja de compartir).
- * 3. Fallback → descarga clásica con ancla.
- * Si el usuario cancela el diálogo, se ignora silenciosamente.
- */
-export async function guardarBlob(blob: Blob, nombre: string): Promise<void> {
+export async function guardarBlob(
+	blob: Blob,
+	nombre: string,
+	tipo: TipoFichero = TIPO_XLSX
+): Promise<void> {
 	const picker = (window as Window & SaveFilePicker).showSaveFilePicker;
 	if (picker) {
 		try {
 			const handle = await picker({
 				suggestedName: nombre,
-				types: [{ description: 'Excel', accept: { [MIME_XLSX]: ['.xlsx'] } }]
+				types: [{ description: tipo.descripcion, accept: { [tipo.mime]: tipo.extensiones } }]
 			});
 			const writable = await handle.createWritable();
 			await writable.write(blob);
@@ -57,7 +82,7 @@ export async function guardarBlob(blob: Blob, nombre: string): Promise<void> {
 		}
 	}
 
-	const archivo = new File([blob], nombre, { type: MIME_XLSX });
+	const archivo = new File([blob], nombre, { type: tipo.mime });
 	if (navigator.canShare?.({ files: [archivo] })) {
 		try {
 			await navigator.share({ files: [archivo], title: nombre });

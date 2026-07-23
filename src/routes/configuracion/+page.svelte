@@ -2,6 +2,7 @@
 	import { subscribe, getSettings, guardarSettings } from '$lib/stores/app-state';
 	import { settingsActual } from '$lib/utils/settings';
 	import type { Settings } from '$lib/db';
+	import CopiaSeguridad from '$lib/components/ajustes/CopiaSeguridad.svelte';
 	import AccionesConfig from '$lib/components/AccionesConfig.svelte';
 
 	let snapshots = $state<Settings[]>(getSettings());
@@ -122,6 +123,8 @@
 				</p>
 			{/if}
 		</div>
+
+		<CopiaSeguridad />
 
 		<AccionesConfig />
 	</div>
